@@ -1,0 +1,87 @@
+C programs are structured with
+ - Directives, commands for the preprocessor
+    - Always begin with #
+ - Functions, blocks of executable code
+ - Statements, commands performed when program is run
+   - Each statement ends in a semilcolon, but may be written over several lines
+
+C99 Specific Features:
+  - // style comments
+  - All variable declarations don't need to be created before statements
+    - Common to now only declare variables when needed
+  - _Bool type, <stdbool.h> allows "bool flag;" syntax and "false" "true" syntax
+  - Allows delcaring variables in for loop
+  - long long int types
+
+Conditional Operator:
+  expr1 ? expr2 : expr3 -> "if expr1 then expr2 else expr"
+
+Typedef: "typedef <built-in type> <type alias name>;" -> "typedef float Dollars;"
+
+Arrays:
+  - If array initializer length is shorter than array, remaining elements are zero, but illegal for initializer to be empty. Thus to zero initialize, use "int a[10] = {0};"
+  - Additionally length can be specified with initializer, "int a[] = {1, 2, 3};"
+  - C99 provides designated initializers, so only a few elements can be specified and others zero
+    - "int a[15] = {[2] = 29, [9] = 7};"
+  - sizeof() on array gives size of entire array
+  - Multidimensional array, a[5][10] = 5 rows, 10 columns. a[i] selects row i
+    - Syntax, can omit inner braces in initializer "a[2][2] = {1, 1, 1, 1};"
+  - C99 allows variable length arrays (VLA), arrays with lengths determined at runtime, even multidimensional
+    - However initializers are not allowed for VLAs.
+
+Functions:
+  - Functions can be defined after being called, however compiler will assume arguments are default types and cast accordingly. Thus it's better to always use a prior function declaration if the function definition is done after it's called.
+  - Function delcarations can omit the argument variable names, just having the types present
+  - C passes arguments by value
+  - Can pass arrays to functions, omiting the length, but a function wont know the length without passing as a parameter
+    - Multidimensional arrays can be passed, but only the length of the first dimension is omitted. IE for 2D the columns must be specified
+  - Passing arrays into functions allows in-place modification of array, so a copy of the array is not created
+  - For VLAs, passing an int parameter first allows the array dimension to be specified as a VLA, even works with multidimensional arrays, ie "int foo(int n, int m, int arr[n][m])"
+  - Arrays can be created as a parameter, via compound literals, ie "(int []){1, 2, 3};"
+
+Static variables allow a variable to have the same memory allocation throughout the program, but the it's scope is still hidden to within the function it's declared
+
+Pointers
+  - int *p, declares a pointer type which points to an int
+  - &i, address operator, gets the address of if 
+  - *p, indirection operator, gains access to object at pointer p
+  - Allowed pointer arithmetic
+    - Adding an integer to a pointer
+    - Subtracting an integer from a pointer
+    - Subtracting on pointer from another
+  - Name of array is pointer to first element. "int a[10];", "*a = 4;"
+    - "a + i" - "&a[i]"
+    - "*(a + i) = a[i]"
+  - Since arrays are pointers when passed to functions, "foo(int a[])" and "foo(int *a)" are equivalent
+
+Preprocessor Directives
+  - Can be extended beyond one line using "\"
+  - Macros
+    - "#" turns argument of macro into a string literal
+      - "#define PRINT_THIS(n) printf(#n "\n");" -> PRINT_THIS(FOO) outputs "FOO\n"
+    - "##" pastes two tokens together into one
+      - "#define MK_ID(n) i##n" -> "int MK_ID(2);" becomes "int i2;"
+      - Can kind of make templates with this
+    - Variable number of argments, "..." in macro definition, "__VA_ARGS__" in declaration
+    - __func__ is a cool macro that gives the string of the function it's within
+
+Organizing
+  - "extern int i" declares variable without defining it
+
+Structs
+  - Can create desginated initializer style structs as "{.foo = 2, .bar = -3}"
+  - declare structure tag, a struct of particular type, as "struct foo {int bar, int bar2;};", then can say "struct foo a1, a2;"
+  - An alternative is to use typedef style, "typedef struct {int bar; int bar2} foo;"
+  - Can also use struct as compound literals, "(struct foo){2, 3}"
+  - Flexible array members, C99 only, specialization of having a struct with a variable length array
+    - "struct arr{ int len; int array[];};
+    - Then when using malloc(sizeof(struct arr) + n);, array is given a length of n automatically.
+    - The felxible array member itself takes no memory in the struct
+
+Unions
+  - C99 allows designated initializers to be used in unions, so any one member can be used to initialize a union
+
+Organization Tips
+  - Declaring a variable static in an object implementation file effectively makes it private, only accessible in that file itself
+  - Hiding what a type contains, encapsulation, is done through incomplete types. This is done by having an interface use a pointer to the struct type, not the struct type itself. Usually as a typedef ie "typedef struct t *T" and everything will use "T" and "struct t" can be defined in the implementation file. For generic interfaces, use void. IE a stack of any type, the stored type in the stack struct will be void pointers.
+
