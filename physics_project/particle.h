@@ -8,6 +8,7 @@ typedef struct {
     vec2 velocity;
     vec2 acceleration;
     float mass;
+    int radius;
 } Particle;
 
 Particle particle_create(float x_pos, float y_pos, float mass)
