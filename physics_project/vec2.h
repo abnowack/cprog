@@ -13,7 +13,7 @@ typedef union {
 
 vec2 vec2_add(vec2 v1, vec2 v2)
 {
-    return (vec2){.x = v1.x + v2.x, v1.y + v1.y};
+    return (vec2){.x = v1.x + v2.x, v1.y + v2.y};
 }
 
 vec2 vec2_sub(vec2 v1, vec2 v2)
