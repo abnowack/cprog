@@ -13,7 +13,7 @@ struct Application
 {
     bool running;
 
-    Particle p;
+    Particle p[2];
 };
 
 int time_previous_frame;
@@ -26,9 +26,11 @@ void app_setup(int window_width, int window_height)
 
     time_previous_frame = 0;
 
-    app.p = particle_create(50, 100, 1.0);
-    app.p.velocity = (vec2){50.0, 10.0};
-    app.p.radius = 4;
+    app.p[0] = particle_create(50, 100, 1.0);
+    app.p[0].radius = 4;
+
+    app.p[1] = particle_create(50, 200, 3.0);
+    app.p[1].radius = 12;
 }
 
 void app_input()
@@ -66,39 +68,49 @@ void app_update()
     time_previous_frame = SDL_GetTicks();
 
     // physics
-    app.p.acceleration = (vec2){0, 9.8 * PIXELS_PER_METER};
-
-    vec2 dv = vec2_scale(app.p.acceleration, delta_time);
-    app.p.velocity = vec2_add(app.p.velocity, dv);
-    vec2 dx = vec2_scale(app.p.velocity, delta_time);
-    app.p.position = vec2_add(app.p.position, dx);
-
-    if (app.p.position.x - app.p.radius <= 0)
+    vec2 wind = {1.0 * PIXELS_PER_METER, 0.0};
+    for (unsigned int i = 0; i < 2; i++)
     {
-        app.p.position.x = app.p.radius;
-        app.p.velocity.x *= -1.0;
-    } 
-    else if (app.p.position.x + app.p.radius >= gfx.window_width)
-    {
-        app.p.position.x = gfx.window_width - app.p.radius;
-        app.p.velocity.x *= -1.0;
+        particle_add_force(&(app.p[i]), wind);
     }
-    if (app.p.position.y - app.p.radius <= 0)
+
+    for (unsigned int i = 0; i < 2; i++)
     {
-        app.p.position.y = app.p.radius;
-        app.p.velocity.y *= -1.0;
-    } 
-    else if (app.p.position.y + app.p.radius >= gfx.window_height)
+        particle_integrate(&(app.p[i]), delta_time);
+    }
+
+    for (unsigned int i = 0; i < 2; i++)
     {
-        app.p.position.y = gfx.window_height - app.p.radius;
-        app.p.velocity.y *= -1.0;
+        if (app.p[i].position.x - app.p[i].radius <= 0)
+        {
+            app.p[i].position.x = app.p[i].radius;
+            app.p[i].velocity.x *= -1.0;
+        } 
+        else if (app.p[i].position.x + app.p[i].radius >= gfx.window_width)
+        {
+            app.p[i].position.x = gfx.window_width - app.p[i].radius;
+            app.p[i].velocity.x *= -1.0;
+        }
+        if (app.p[i].position.y - app.p[i].radius <= 0)
+        {
+            app.p[i].position.y = app.p[i].radius;
+            app.p[i].velocity.y *= -1.0;
+        } 
+        else if (app.p[i].position.y + app.p[i].radius >= gfx.window_height)
+        {
+            app.p[i].position.y = gfx.window_height - app.p[i].radius;
+            app.p[i].velocity.y *= -1.0;
+        }
     }
 }
 
 void app_render()
 {
     gfx_clear_screen((uint8_t [3]){255, 255, 255});
-    gfx_draw_filled_circle(app.p.position.x, app.p.position.y, app.p.radius, (uint8_t [3]){255, 0, 255});
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t [3]){255, 0, 255});
+    }
     gfx_render_frame();
 }
 

@@ -9,7 +9,10 @@ typedef struct {
     vec2 acceleration;
     float mass;
     int radius;
+    vec2 force;
 } Particle;
+
+void particle_clear_force(Particle*);
 
 Particle particle_create(float x_pos, float y_pos, float mass)
 {
@@ -18,7 +21,31 @@ Particle particle_create(float x_pos, float y_pos, float mass)
     p.velocity = (vec2){0, 0};
     p.acceleration = (vec2){0, 0};
     p.mass = mass;
+    p.radius = 1;
+    p.force = (vec2){0, 0};
     return p;
+}
+
+void particle_integrate(Particle *p, float delta_time)
+{
+    p->acceleration = vec2_scale(p->force, 1.0 / p->mass);
+
+    vec2 dv = vec2_scale(p->acceleration, delta_time);
+    p->velocity = vec2_add(p->velocity, dv);
+    vec2 dx = vec2_scale(p->velocity, delta_time);
+    p->position = vec2_add(p->position, dx);
+
+    particle_clear_force(p);
+}
+
+void particle_add_force(Particle *p, vec2 force)
+{
+    p->force = vec2_add(p->force, force);
+}
+
+void particle_clear_force(Particle *p)
+{
+    p->force = (vec2){0, 0};
 }
 
 #endif
