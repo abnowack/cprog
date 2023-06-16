@@ -66,4 +66,10 @@ void gfx_draw_filled_circle(int x, int y, int radius, uint8_t color[3])
     filledCircleColor(gfx.renderer, x, y, radius, rgba);
 }
 
+void gfx_draw_filled_rectangle(int x, int y, int width, int height, uint8_t color[3])
+{
+    SDL_SetRenderDrawColor(gfx.renderer, color[0], color[1], color[2], 255);
+    SDL_RenderFillRect(gfx.renderer, &(SDL_Rect){.x = x, .y = y, .w = width, .h = height});
+}
+
 #endif

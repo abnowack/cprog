@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 #include "graphics.h"
 #include "particle.h"
+#include "force.h"
 
 #define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
@@ -14,11 +15,14 @@ struct Application
     bool running;
 
     Particle p[2];
+    vec2 push_force;
+
+    SDL_Rect liquid;
 };
 
 int time_previous_frame;
 
-struct Application app = {.running = false};
+struct Application app = {.running = false, .push_force = (vec2){0, 0}};
 
 void app_setup(int window_width, int window_height)
 {
@@ -31,6 +35,11 @@ void app_setup(int window_width, int window_height)
 
     app.p[1] = particle_create(50, 200, 3.0);
     app.p[1].radius = 12;
+
+    app.liquid.x = 0;
+    app.liquid.y = gfx.window_height / 2;
+    app.liquid.w = gfx.window_width;
+    app.liquid.h = gfx.window_height / 2;
 }
 
 void app_input()
@@ -46,6 +55,32 @@ void app_input()
         case SDL_KEYDOWN:
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 app.running = false;
+            if (event.key.keysym.sym == SDLK_UP)
+                app.push_force.y = -50 * PIXELS_PER_METER;
+            if (event.key.keysym.sym == SDLK_RIGHT)
+                app.push_force.x = 50 * PIXELS_PER_METER;
+            if (event.key.keysym.sym == SDLK_DOWN)
+                app.push_force.y = 50 * PIXELS_PER_METER;
+            if (event.key.keysym.sym == SDLK_LEFT)
+                app.push_force.x = -50 * PIXELS_PER_METER;
+            break;
+        case SDL_KEYUP:
+            if (event.key.keysym.sym == SDLK_UP)
+                app.push_force.y = 0;
+            if (event.key.keysym.sym == SDLK_RIGHT)
+                app.push_force.x = 0;
+            if (event.key.keysym.sym == SDLK_DOWN)
+                app.push_force.y = 0;
+            if (event.key.keysym.sym == SDLK_LEFT)
+                app.push_force.x = 0;
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (event.button.button == SDL_BUTTON_LEFT)
+            {
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+                app.p[0].position = (vec2){x, y};
+            }
             break;
         }
     }
@@ -68,10 +103,23 @@ void app_update()
     time_previous_frame = SDL_GetTicks();
 
     // physics
-    vec2 wind = {1.0 * PIXELS_PER_METER, 0.0};
+    // apply forces
     for (unsigned int i = 0; i < 2; i++)
     {
-        particle_add_force(&(app.p[i]), wind);
+        // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
+        // particle_add_force(&(app.p[i]), wind);
+        // vec2 gravity = {0.0, app.p[i].mass * 9.8 * PIXELS_PER_METER};
+        // particle_add_force(&(app.p[i]), gravity);
+
+        particle_add_force(&(app.p[i]), app.push_force);
+
+        // if (app.p[i].position.y >= app.liquid.y)
+        // {
+            // particle_add_force(&(app.p[i]), force_drag(&(app.p[i]), 0.01));
+        // }
+
+        vec2 friction = force_friction(&(app.p[i]), 10.0 * PIXELS_PER_METER);
+        particle_add_force(&(app.p[i]), friction);
     }
 
     for (unsigned int i = 0; i < 2; i++)
@@ -85,7 +133,7 @@ void app_update()
         {
             app.p[i].position.x = app.p[i].radius;
             app.p[i].velocity.x *= -1.0;
-        } 
+        }
         else if (app.p[i].position.x + app.p[i].radius >= gfx.window_width)
         {
             app.p[i].position.x = gfx.window_width - app.p[i].radius;
@@ -95,7 +143,7 @@ void app_update()
         {
             app.p[i].position.y = app.p[i].radius;
             app.p[i].velocity.y *= -1.0;
-        } 
+        }
         else if (app.p[i].position.y + app.p[i].radius >= gfx.window_height)
         {
             app.p[i].position.y = gfx.window_height - app.p[i].radius;
@@ -106,10 +154,18 @@ void app_update()
 
 void app_render()
 {
-    gfx_clear_screen((uint8_t [3]){255, 255, 255});
+    gfx_clear_screen((uint8_t[3]){255, 255, 255});
+
+    gfx_draw_filled_rectangle(
+        app.liquid.x, 
+        app.liquid.y, 
+        app.liquid.w, 
+        app.liquid.h,
+        (uint8_t [3]){0x13, 0x37, 0x6E});
+
     for (unsigned int i = 0; i < 2; i++)
     {
-        gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t [3]){255, 0, 255});
+        gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t[3]){255, 0, 255});
     }
     gfx_render_frame();
 }
