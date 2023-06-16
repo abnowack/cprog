@@ -19,6 +19,8 @@ struct Application
     Particle p[MAX_PARTICLES];
     unsigned int n_particles;
 
+    vec2 spring_anchor;
+
     vec2 push_force;
     vec2 mouse_cursor_pos;
     bool mouse_button_down;
@@ -44,6 +46,8 @@ void app_setup(int window_width, int window_height)
     app.p[app.n_particles] = particle_create(50, 200, 3.0);
     app.p[app.n_particles].radius = 12;
     app.n_particles++;
+
+    app.spring_anchor = (vec2){100, 100};
 }
 
 void app_input()
@@ -133,6 +137,10 @@ void app_update()
 
     // physics
     // apply forces
+
+    vec2 spring_force = force_spring(&(app.p[1]), app.spring_anchor, 0, 20);
+    particle_add_force(&(app.p[1]), spring_force);
+
     for (unsigned int i = 0; i < app.n_particles; i++)
     {
         // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
@@ -196,6 +204,8 @@ void app_render()
     {
         gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t[3]){255, 0, 255});
     }
+
+    gfx_draw_filled_circle(app.spring_anchor.x, app.spring_anchor.y, 5, (uint8_t[3]){0, 255, 0});
 
     if (app.mouse_button_down)
     {

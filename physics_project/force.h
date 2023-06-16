@@ -46,4 +46,16 @@ vec2 force_gravity(Particle *p1, Particle *p2, float G, float min_distance, floa
     return gravity;
 }
 
+vec2 force_spring(Particle *p, vec2 anchor, float rest_length, float k)
+{
+    vec2 d = vec2_sub(p->position, anchor);
+    float displacement = vec2_norm(d) - rest_length;
+
+    vec2 spring_direction = vec2_unitvector(d);
+    float spring_magnitude = -k * displacement;
+
+    vec2 spring = vec2_scale(spring_direction, spring_magnitude);
+    return spring;
+}
+
 #endif
