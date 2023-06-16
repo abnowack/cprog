@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    app_setup(640, 480);
+    app_setup(800, 600);
 
     while(app.running)
     {

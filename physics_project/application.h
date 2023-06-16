@@ -10,7 +10,7 @@
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 #define PIXELS_PER_METER 50
 
-#define MAX_PARTICLES 50
+#define MAX_PARTICLES 10
 
 struct Application
 {
@@ -20,6 +20,8 @@ struct Application
     unsigned int n_particles;
 
     vec2 spring_anchor;
+    float spring_k;
+    float spring_rest_length;
 
     vec2 push_force;
     vec2 mouse_cursor_pos;
@@ -37,17 +39,17 @@ void app_setup(int window_width, int window_height)
     time_previous_frame = 0;
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
+    app.spring_k = 100;
+    app.spring_rest_length = 10;
 
-    app.p[app.n_particles] = particle_create(50, 100, 1.0);
-    app.p[app.n_particles].radius = 4;
-    app.p[app.n_particles].velocity = (vec2){10 * PIXELS_PER_METER, 10 * PIXELS_PER_METER};
-    app.n_particles++;
+    app.spring_anchor = (vec2){gfx.window_width / 2, 30};
 
-    app.p[app.n_particles] = particle_create(50, 200, 3.0);
-    app.p[app.n_particles].radius = 12;
-    app.n_particles++;
-
-    app.spring_anchor = (vec2){100, 100};
+    for (unsigned int i = 0; i < 10; i++)
+    {
+        app.p[app.n_particles] = particle_create(app.spring_anchor.x, app.spring_anchor.y + 20 * (i + 1), 1.0);
+        app.p[app.n_particles].radius = 4;
+        app.n_particles++;
+    }
 }
 
 void app_input()
@@ -94,13 +96,13 @@ void app_input()
                 SDL_GetMouseState(&x, &y);
                 app.mouse_cursor_pos.x = x;
                 app.mouse_cursor_pos.y = y;
-                if (app.n_particles < MAX_PARTICLES)
-                {
-                    app.p[app.n_particles] = particle_create(x, y, 1.0);
-                    app.p[app.n_particles].radius = 4;
-                    app.p[app.n_particles].frozen = true;
-                    app.n_particles++;
-                }
+                // if (app.n_particles < MAX_PARTICLES)
+                // {
+                //     app.p[app.n_particles] = particle_create(x, y, 1.0);
+                //     app.p[app.n_particles].radius = 4;
+                //     app.p[app.n_particles].frozen = true;
+                //     app.n_particles++;
+                // }
 
             }
             break;
@@ -138,31 +140,46 @@ void app_update()
     // physics
     // apply forces
 
-    vec2 spring_force = force_spring(&(app.p[1]), app.spring_anchor, 0, 20);
-    particle_add_force(&(app.p[1]), spring_force);
+
+    vec2 spring_force = force_spring(&(app.p[0]), app.spring_anchor, app.spring_rest_length, app.spring_k);
+    particle_add_force(&(app.p[0]), spring_force);
 
     for (unsigned int i = 0; i < app.n_particles; i++)
     {
         // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
         // particle_add_force(&(app.p[i]), wind);
-        // vec2 gravity = {0.0, app.p[i].mass * 9.8 * PIXELS_PER_METER};
-        // particle_add_force(&(app.p[i]), gravity);
+        vec2 gravity = {0.0, app.p[i].mass * 9.8 * PIXELS_PER_METER};
+        particle_add_force(&(app.p[i]), gravity);
 
-        particle_add_force(&(app.p[i]), app.push_force);
-
-        // vec2 friction = force_friction(&(app.p[i]), 10.0 * PIXELS_PER_METER);
-        // particle_add_force(&(app.p[i]), friction);
-
-        for (unsigned int j = i+1; j < app.n_particles; j++)
+        if (i == 0)
         {
-            if (app.p[i].frozen || app.p[j].frozen)
-                continue;
-
-            float G = 10000.0;
-            vec2 gravity = force_gravity(&(app.p[i]), &(app.p[j]), G, 5, 100);
-            particle_add_force(&(app.p[i]), gravity);
-            particle_add_force(&(app.p[j]), vec2_scale(gravity, -1.0));
+            vec2 spring_force = force_spring(&(app.p[i]), app.spring_anchor, app.spring_rest_length, app.spring_k);
+            particle_add_force(&(app.p[i]), spring_force);
         }
+        else
+        {
+            vec2 spring_force = force_spring(&(app.p[i]), app.p[i-1].position, app.spring_rest_length, app.spring_k);
+            particle_add_force(&(app.p[i]), spring_force);
+
+            vec2 spring_force_2 = force_spring(&(app.p[i-1]), app.p[i].position, app.spring_rest_length, app.spring_k);
+            particle_add_force(&(app.p[i-1]), spring_force_2);
+        }
+
+        // particle_add_force(&(app.p[i]), app.push_force);
+
+        vec2 friction = force_friction(&(app.p[i]), 1.0 * PIXELS_PER_METER);
+        particle_add_force(&(app.p[i]), friction);
+
+        // for (unsigned int j = i+1; j < app.n_particles; j++)
+        // {
+        //     if (app.p[i].frozen || app.p[j].frozen)
+        //         continue;
+
+        //     float G = 10000.0;
+        //     vec2 gravity = force_gravity(&(app.p[i]), &(app.p[j]), G, 5, 100);
+        //     particle_add_force(&(app.p[i]), gravity);
+        //     particle_add_force(&(app.p[j]), vec2_scale(gravity, -1.0));
+        // }
     }
 
     for (unsigned int i = 0; i < app.n_particles; i++)
@@ -203,6 +220,15 @@ void app_render()
     for (unsigned int i = 0; i < app.n_particles; i++)
     {
         gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t[3]){255, 0, 255});
+
+        if (i == 0)
+        {
+            gfx_draw_line(app.p[0].position.x, app.p[0].position.y, app.spring_anchor.x, app.spring_anchor.y, (uint8_t[3]){255, 0, 0});
+        }
+        else
+        {
+            gfx_draw_line(app.p[i].position.x, app.p[i].position.y, app.p[i-1].position.x, app.p[i-1].position.y, (uint8_t[3]){255, 0, 0});
+        }
     }
 
     gfx_draw_filled_circle(app.spring_anchor.x, app.spring_anchor.y, 5, (uint8_t[3]){0, 255, 0});
