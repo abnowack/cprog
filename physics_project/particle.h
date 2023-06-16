@@ -11,6 +11,7 @@ typedef struct {
     float inv_mass;
     int radius;
     vec2 force;
+    bool frozen;
 } Particle;
 
 void particle_clear_force(Particle*);
@@ -22,6 +23,7 @@ Particle particle_create(float x_pos, float y_pos, float mass)
     p.velocity = (vec2){0, 0};
     p.acceleration = (vec2){0, 0};
     p.mass = mass;
+    p.frozen = false;
     if (p.mass != 0.0)
     {
         p.inv_mass = 1.0 / p.mass;

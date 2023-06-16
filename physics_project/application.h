@@ -38,6 +38,7 @@ void app_setup(int window_width, int window_height)
 
     app.p[app.n_particles] = particle_create(50, 100, 1.0);
     app.p[app.n_particles].radius = 4;
+    app.p[app.n_particles].velocity = (vec2){10 * PIXELS_PER_METER, 10 * PIXELS_PER_METER};
     app.n_particles++;
 
     app.p[app.n_particles] = particle_create(50, 200, 3.0);
@@ -93,6 +94,7 @@ void app_input()
                 {
                     app.p[app.n_particles] = particle_create(x, y, 1.0);
                     app.p[app.n_particles].radius = 4;
+                    app.p[app.n_particles].frozen = true;
                     app.n_particles++;
                 }
 
@@ -106,6 +108,7 @@ void app_input()
                 vec2 impulse_dir = vec2_unitvector(diff);
                 float impulse_magnitude = vec2_norm(diff) * 5.0;
                 app.p[app.n_particles - 1].velocity = vec2_scale(impulse_dir, impulse_magnitude);
+                app.p[app.n_particles - 1].frozen = false;
             }
             break;
         }
@@ -141,11 +144,23 @@ void app_update()
 
         // vec2 friction = force_friction(&(app.p[i]), 10.0 * PIXELS_PER_METER);
         // particle_add_force(&(app.p[i]), friction);
+
+        for (unsigned int j = i+1; j < app.n_particles; j++)
+        {
+            if (app.p[i].frozen || app.p[j].frozen)
+                continue;
+
+            float G = 10000.0;
+            vec2 gravity = force_gravity(&(app.p[i]), &(app.p[j]), G, 5, 100);
+            particle_add_force(&(app.p[i]), gravity);
+            particle_add_force(&(app.p[j]), vec2_scale(gravity, -1.0));
+        }
     }
 
     for (unsigned int i = 0; i < app.n_particles; i++)
     {
-        particle_integrate(&(app.p[i]), delta_time);
+        if (!app.p[i].frozen)
+            particle_integrate(&(app.p[i]), delta_time);
     }
 
     for (unsigned int i = 0; i < app.n_particles; i++)
