@@ -72,4 +72,10 @@ void gfx_draw_filled_rectangle(int x, int y, int width, int height, uint8_t colo
     SDL_RenderFillRect(gfx.renderer, &(SDL_Rect){.x = x, .y = y, .w = width, .h = height});
 }
 
+void gfx_draw_line(int x0, int y0, int x1, int y1, uint8_t color[3])
+{
+    uint32_t rgba = (255 << 24) + (color[2] << 16) + (color[1] << 8) + color[0];
+    lineColor(gfx.renderer, x0, y0, x1, y1, rgba);
+}
+
 #endif
