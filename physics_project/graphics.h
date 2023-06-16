@@ -66,6 +66,13 @@ void gfx_draw_filled_circle(int x, int y, int radius, uint8_t color[3])
     filledCircleColor(gfx.renderer, x, y, radius, rgba);
 }
 
+void gfx_draw_circle(int x, int y, int radius, float angle, uint8_t color[3])
+{
+    uint32_t rgba = (255 << 24) + (color[2] << 16) + (color[1] << 8) + color[0];
+    circleColor(gfx.renderer, x, y, radius, rgba);
+    lineColor(gfx.renderer, x, y, x + cosf(angle) * radius, y + sinf(angle) * radius, rgba);
+}
+
 void gfx_draw_filled_rectangle(int x, int y, int width, int height, uint8_t color[3])
 {
     SDL_SetRenderDrawColor(gfx.renderer, color[0], color[1], color[2], 255);

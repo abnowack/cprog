@@ -3,53 +3,42 @@
 
 #include <SDL2/SDL.h>
 #include "graphics.h"
-#include "particle.h"
+#include "body.h"
 #include "force.h"
 
 #define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 #define PIXELS_PER_METER 50
 
-#define MAX_PARTICLES 10
+#define MAX_BODIES 10
 
 struct Application
 {
     bool running;
 
-    Particle p[MAX_PARTICLES];
-    unsigned int n_particles;
+    Body b[MAX_BODIES];
+    unsigned int n_bodies;
 
-    vec2 spring_anchor;
-    float spring_k;
-    float spring_rest_length;
-
-    vec2 push_force;
     vec2 mouse_cursor_pos;
     bool mouse_button_down;
 };
 
 int time_previous_frame;
 
-struct Application app = {.running = false, .push_force = (vec2){0, 0}};
+struct Application app = {.running = false};
 
 void app_setup(int window_width, int window_height)
 {
     app.running = gfx_create_window(window_width, window_height);
-    app.n_particles = 0;
+    app.n_bodies = 0;
     time_previous_frame = 0;
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
-    app.spring_k = 100;
-    app.spring_rest_length = 10;
 
-    app.spring_anchor = (vec2){gfx.window_width / 2, 30};
-
-    for (unsigned int i = 0; i < 10; i++)
-    {
-        app.p[app.n_particles] = particle_create(app.spring_anchor.x, app.spring_anchor.y + 20 * (i + 1), 1.0);
-        app.p[app.n_particles].radius = 4;
-        app.n_particles++;
-    }
+    Circle *c = (Circle *)malloc(sizeof(Circle));
+    *c = circle_create(50.0);
+    app.b[app.n_bodies] = body_create((Shape*)c, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    app.n_bodies++;
 }
 
 void app_input()
@@ -65,24 +54,8 @@ void app_input()
         case SDL_KEYDOWN:
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 app.running = false;
-            if (event.key.keysym.sym == SDLK_UP)
-                app.push_force.y = -50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_RIGHT)
-                app.push_force.x = 50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_DOWN)
-                app.push_force.y = 50 * PIXELS_PER_METER;
-            if (event.key.keysym.sym == SDLK_LEFT)
-                app.push_force.x = -50 * PIXELS_PER_METER;
             break;
         case SDL_KEYUP:
-            if (event.key.keysym.sym == SDLK_UP)
-                app.push_force.y = 0;
-            if (event.key.keysym.sym == SDLK_RIGHT)
-                app.push_force.x = 0;
-            if (event.key.keysym.sym == SDLK_DOWN)
-                app.push_force.y = 0;
-            if (event.key.keysym.sym == SDLK_LEFT)
-                app.push_force.x = 0;
             break;
         case SDL_MOUSEMOTION:
             app.mouse_cursor_pos.x = event.motion.x;
@@ -96,25 +69,24 @@ void app_input()
                 SDL_GetMouseState(&x, &y);
                 app.mouse_cursor_pos.x = x;
                 app.mouse_cursor_pos.y = y;
-                // if (app.n_particles < MAX_PARTICLES)
+                // if (app.n_Bodys < MAX_BodyS)
                 // {
-                //     app.p[app.n_particles] = particle_create(x, y, 1.0);
-                //     app.p[app.n_particles].radius = 4;
-                //     app.p[app.n_particles].frozen = true;
-                //     app.n_particles++;
+                //     app.p[app.n_Bodys] = Body_create(x, y, 1.0);
+                //     app.p[app.n_Bodys].radius = 4;
+                //     app.p[app.n_Bodys].frozen = true;
+                //     app.n_Bodys++;
                 // }
-
             }
             break;
         case SDL_MOUSEBUTTONUP:
             if (app.mouse_button_down && event.button.button == SDL_BUTTON_LEFT)
             {
                 app.mouse_button_down = false;
-                vec2 diff = vec2_sub(app.p[app.n_particles - 1].position, app.mouse_cursor_pos);
-                vec2 impulse_dir = vec2_unitvector(diff);
-                float impulse_magnitude = vec2_norm(diff) * 5.0;
-                app.p[app.n_particles - 1].velocity = vec2_scale(impulse_dir, impulse_magnitude);
-                app.p[app.n_particles - 1].frozen = false;
+                // vec2 diff = vec2_sub(app.p[app.n_Bodys - 1].position, app.mouse_cursor_pos);
+                // vec2 impulse_dir = vec2_unitvector(diff);
+                // float impulse_magnitude = vec2_norm(diff) * 5.0;
+                // app.p[app.n_Bodys - 1].velocity = vec2_scale(impulse_dir, impulse_magnitude);
+                // app.p[app.n_Bodys - 1].frozen = false;
             }
             break;
         }
@@ -139,76 +111,44 @@ void app_update()
 
     // physics
     // apply forces
-
-
-    vec2 spring_force = force_spring(&(app.p[0]), app.spring_anchor, app.spring_rest_length, app.spring_k);
-    particle_add_force(&(app.p[0]), spring_force);
-
-    for (unsigned int i = 0; i < app.n_particles; i++)
+    for (unsigned int i = 0; i < app.n_bodies; i++)
     {
         // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
-        // particle_add_force(&(app.p[i]), wind);
-        vec2 gravity = {0.0, app.p[i].mass * 9.8 * PIXELS_PER_METER};
-        particle_add_force(&(app.p[i]), gravity);
-
-        if (i == 0)
-        {
-            vec2 spring_force = force_spring(&(app.p[i]), app.spring_anchor, app.spring_rest_length, app.spring_k);
-            particle_add_force(&(app.p[i]), spring_force);
-        }
-        else
-        {
-            vec2 spring_force = force_spring(&(app.p[i]), app.p[i-1].position, app.spring_rest_length, app.spring_k);
-            particle_add_force(&(app.p[i]), spring_force);
-
-            vec2 spring_force_2 = force_spring(&(app.p[i-1]), app.p[i].position, app.spring_rest_length, app.spring_k);
-            particle_add_force(&(app.p[i-1]), spring_force_2);
-        }
-
-        // particle_add_force(&(app.p[i]), app.push_force);
-
-        vec2 friction = force_friction(&(app.p[i]), 1.0 * PIXELS_PER_METER);
-        particle_add_force(&(app.p[i]), friction);
-
-        // for (unsigned int j = i+1; j < app.n_particles; j++)
-        // {
-        //     if (app.p[i].frozen || app.p[j].frozen)
-        //         continue;
-
-        //     float G = 10000.0;
-        //     vec2 gravity = force_gravity(&(app.p[i]), &(app.p[j]), G, 5, 100);
-        //     particle_add_force(&(app.p[i]), gravity);
-        //     particle_add_force(&(app.p[j]), vec2_scale(gravity, -1.0));
-        // }
+        // Body_add_force(&(app.p[i]), wind);
+        vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
+        body_add_force(&(app.b[i]), gravity);
     }
 
-    for (unsigned int i = 0; i < app.n_particles; i++)
+    for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        if (!app.p[i].frozen)
-            particle_integrate(&(app.p[i]), delta_time);
+        body_integrate(&(app.b[i]), delta_time);
     }
 
-    for (unsigned int i = 0; i < app.n_particles; i++)
+    for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        if (app.p[i].position.x - app.p[i].radius <= 0)
+        if (app.b[i].shape->type == CIRCLE)
         {
-            app.p[i].position.x = app.p[i].radius;
-            app.p[i].velocity.x *= -1.0;
-        }
-        else if (app.p[i].position.x + app.p[i].radius >= gfx.window_width)
-        {
-            app.p[i].position.x = gfx.window_width - app.p[i].radius;
-            app.p[i].velocity.x *= -1.0;
-        }
-        if (app.p[i].position.y - app.p[i].radius <= 0)
-        {
-            app.p[i].position.y = app.p[i].radius;
-            app.p[i].velocity.y *= -1.0;
-        }
-        else if (app.p[i].position.y + app.p[i].radius >= gfx.window_height)
-        {
-            app.p[i].position.y = gfx.window_height - app.p[i].radius;
-            app.p[i].velocity.y *= -1.0;
+            Circle *c = (Circle *)(app.b[i].shape);
+            if (app.b[i].position.x - c->radius <= 0)
+            {
+                app.b[i].position.x = c->radius;
+                app.b[i].velocity.x *= -1.0;
+            }
+            else if (app.b[i].position.x + c->radius >= gfx.window_width)
+            {
+                app.b[i].position.x = gfx.window_width - c->radius;
+                app.b[i].velocity.x *= -1.0;
+            }
+            if (app.b[i].position.y - c->radius <= 0)
+            {
+                app.b[i].position.y = c->radius;
+                app.b[i].velocity.y *= -1.0;
+            }
+            else if (app.b[i].position.y + c->radius >= gfx.window_height)
+            {
+                app.b[i].position.y = gfx.window_height - c->radius;
+                app.b[i].velocity.y *= -1.0;
+            }
         }
     }
 }
@@ -217,26 +157,19 @@ void app_render()
 {
     gfx_clear_screen((uint8_t[3]){255, 255, 255});
 
-    for (unsigned int i = 0; i < app.n_particles; i++)
+    for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        gfx_draw_filled_circle(app.p[i].position.x, app.p[i].position.y, app.p[i].radius, (uint8_t[3]){255, 0, 255});
-
-        if (i == 0)
+        if (app.b[i].shape->type == CIRCLE)
         {
-            gfx_draw_line(app.p[0].position.x, app.p[0].position.y, app.spring_anchor.x, app.spring_anchor.y, (uint8_t[3]){255, 0, 0});
-        }
-        else
-        {
-            gfx_draw_line(app.p[i].position.x, app.p[i].position.y, app.p[i-1].position.x, app.p[i-1].position.y, (uint8_t[3]){255, 0, 0});
+            Circle *c = (Circle *)(app.b[i].shape);
+            gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, 0.0, (uint8_t[3]){255, 0, 255});
         }
     }
 
-    gfx_draw_filled_circle(app.spring_anchor.x, app.spring_anchor.y, 5, (uint8_t[3]){0, 255, 0});
-
-    if (app.mouse_button_down)
-    {
-        gfx_draw_line(app.p[app.n_particles - 1].position.x, app.p[app.n_particles - 1].position.y, app.mouse_cursor_pos.x, app.mouse_cursor_pos.y, (uint8_t[3]){255, 0, 0});
-    }
+    // if (app.mouse_button_down)
+    // {
+    // gfx_draw_line(app.p[app.n_Bodys - 1].position.x, app.p[app.n_Bodys - 1].position.y, app.mouse_cursor_pos.x, app.mouse_cursor_pos.y, (uint8_t[3]){255, 0, 0});
+    // }
 
     gfx_render_frame();
 }

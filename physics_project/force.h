@@ -2,9 +2,9 @@
 #define FORCE_H
 
 #include "vec2.h"
-#include "particle.h"
+#include "body.h"
 
-vec2 force_drag(Particle *p, float k)
+vec2 force_drag(Body *p, float k)
 {
     vec2 drag = (vec2){0, 0};
 
@@ -20,7 +20,7 @@ vec2 force_drag(Particle *p, float k)
     return drag;
 }
 
-vec2 force_friction(Particle *p, float k)
+vec2 force_friction(Body *p, float k)
 {
     vec2 direction = vec2_scale(vec2_unitvector(p->velocity), -1);
 
@@ -29,7 +29,7 @@ vec2 force_friction(Particle *p, float k)
     return friction;
 }
 
-vec2 force_gravity(Particle *p1, Particle *p2, float G, float min_distance, float max_distance)
+vec2 force_gravity(Body *p1, Body *p2, float G, float min_distance, float max_distance)
 {
     vec2 d = vec2_sub(p2->position, p1->position);
     float distance = vec2_norm(d);
@@ -46,7 +46,7 @@ vec2 force_gravity(Particle *p1, Particle *p2, float G, float min_distance, floa
     return gravity;
 }
 
-vec2 force_spring(Particle *p, vec2 anchor, float rest_length, float k)
+vec2 force_spring(Body *p, vec2 anchor, float rest_length, float k)
 {
     vec2 d = vec2_sub(p->position, anchor);
     float displacement = vec2_norm(d) - rest_length;
