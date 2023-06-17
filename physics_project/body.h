@@ -21,13 +21,14 @@ typedef struct {
     float inv_inertia;
     float torque;
 
-    Shape *shape;
+    ShapeType shape_type;
+    void *shape;
 } Body;
 
 void body_clear_force(Body*);
 void body_clear_torque(Body*);
 
-Body body_create(Shape *shape, float x_pos, float y_pos, float mass)
+Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, float mass)
 {
     Body b;
     
@@ -50,8 +51,9 @@ Body body_create(Shape *shape, float x_pos, float y_pos, float mass)
     b.omega = 0;
     b.alpha = 0;
 
+    b.shape_type = shape_type;
     b.shape = shape;
-    b.inertia = shape_moment_of_inertia(shape) * b.mass;
+    b.inertia = shape_moment_of_inertia(b.shape_type, b.shape) * b.mass;
     if (b.inertia != 0.0)
     {
         b.inv_inertia = 1.0 / b.inertia;
@@ -83,6 +85,9 @@ void body_integrate_angle(Body *b, float delta_time)
     b->omega += b->alpha * delta_time;
     b->theta += b->omega * delta_time;
 
+    b->theta = (b->theta + 2.0 * M_PI);
+    b->theta = fmodf(b->theta, 2.0 * M_PI);
+
     body_clear_torque(b);
 }
 
@@ -111,10 +116,13 @@ void body_update(Body *b, float delta_time)
     body_integrate_position(b, delta_time);
     body_integrate_angle(b, delta_time);
 
-    if (b->shape->type == BOX)
+    if (b->shape_type == BOX)
     {
-        Box *box = (Box*)b->shape;
-        box_update_vertices(b->theta, b->position, box);
+        box_update_vertices(b->theta, b->position, (Box*)b->shape);
+    }
+    else if (b->shape_type == POLYGON)
+    {
+        polygon_update_vertices(b->theta, b->position, (Polygon*)(b->shape));
     }
 }
 

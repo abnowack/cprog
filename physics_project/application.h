@@ -42,7 +42,7 @@ void app_setup(int window_width, int window_height)
 
     Box *b = (Box *)malloc(sizeof(Box));
     *b = box_create(200, 100);
-    app.b[app.n_bodies] = body_create((Shape*)b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    app.b[app.n_bodies] = body_create(BOX, b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
     app.n_bodies++;
 }
 
@@ -122,7 +122,7 @@ void app_update()
         // Body_add_force(&(app.p[i]), wind);
         // vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
         // body_add_force(&(app.b[i]), gravity);
-    
+
         float torque = 2000;
         body_add_torque(&(app.b[i]), torque);
     }
@@ -134,7 +134,7 @@ void app_update()
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        if (app.b[i].shape->type == CIRCLE)
+        if (app.b[i].shape_type == CIRCLE)
         {
             Circle *c = (Circle *)(app.b[i].shape);
             if (app.b[i].position.x - c->radius <= 0)
@@ -167,15 +167,21 @@ void app_render()
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        if (app.b[i].shape->type == CIRCLE)
+        if (app.b[i].shape_type == CIRCLE)
         {
             Circle *c = (Circle *)(app.b[i].shape);
             gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, app.b[i].theta, (uint8_t[3]){255, 0, 255});
         }
-        else if (app.b[i].shape->type == BOX)
+        else if (app.b[i].shape_type == BOX)
         {
             Box *b = (Box *)(app.b[i].shape);
             gfx_draw_polygon(app.b[i].position.x, app.b[i].position.y, b->global_vertices, b->n_vertices, (uint8_t[3]){255, 0, 255});
+        }
+        else if (app.b[i].shape_type == POLYGON)
+        {
+        }
+        else
+        {
         }
     }
 
