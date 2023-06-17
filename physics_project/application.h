@@ -5,6 +5,7 @@
 #include "graphics.h"
 #include "body.h"
 #include "force.h"
+#include "collision.h"
 
 #define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
@@ -35,15 +36,20 @@ void app_setup(int window_width, int window_height)
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
 
-    // Circle *c = (Circle *)malloc(sizeof(Circle));
-    // *c = circle_create(50.0);
-    // app.b[app.n_bodies] = body_create((Shape*)c, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
-    // app.n_bodies++;
-
-    Box *b = (Box *)malloc(sizeof(Box));
-    *b = box_create(200, 100);
-    app.b[app.n_bodies] = body_create(BOX, b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    Circle *c1 = (Circle *)malloc(sizeof(Circle));
+    *c1 = circle_create(50.0);
+    app.b[app.n_bodies] = body_create(CIRCLE, c1, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
     app.n_bodies++;
+
+    Circle *c2 = (Circle *)malloc(sizeof(Circle));
+    *c2 = circle_create(100.0);
+    app.b[app.n_bodies] = body_create(CIRCLE, c2, 150, 200, 1.0);
+    app.n_bodies++;
+
+    // Box *b = (Box *)malloc(sizeof(Box));
+    // *b = box_create(200, 100);
+    // app.b[app.n_bodies] = body_create(BOX, b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    // app.n_bodies++;
 }
 
 void app_input()
@@ -118,10 +124,10 @@ void app_update()
     // apply forces
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
-        // Body_add_force(&(app.p[i]), wind);
-        // vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
-        // body_add_force(&(app.b[i]), gravity);
+        vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
+        body_add_force(&(app.b[i]), wind);
+        vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
+        body_add_force(&(app.b[i]), gravity);
 
         float torque = 2000;
         body_add_torque(&(app.b[i]), torque);
@@ -130,6 +136,21 @@ void app_update()
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
         body_update(&(app.b[i]), delta_time);
+    }
+
+    // collision detection
+    for (unsigned int i = 0; i < app.n_bodies; i++)
+    {
+        for (unsigned int j = i+1; j < app.n_bodies; j++)
+        {
+            Body *a = &(app.b[i]);
+            Body *b = &(app.b[j]);
+
+            if (collision(a, b))
+            {
+                printf("collide!\n");
+            }
+        }
     }
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
