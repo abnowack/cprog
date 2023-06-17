@@ -73,6 +73,9 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
 
 void body_integrate_position(Body *b, float delta_time)
 {
+    if (b->inv_mass == 0)
+        return;
+
     b->acceleration = vec2_scale(b->force, b->inv_mass);
 
     vec2 dv = vec2_scale(b->acceleration, delta_time);
@@ -85,6 +88,9 @@ void body_integrate_position(Body *b, float delta_time)
 
 void body_integrate_angle(Body *b, float delta_time)
 {
+    if (b->inv_mass == 0)
+        return;
+
     b->alpha = b->torque * b->inv_inertia;
     b->omega += b->alpha * delta_time;
     b->theta += b->omega * delta_time;

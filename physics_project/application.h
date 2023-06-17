@@ -38,7 +38,7 @@ void app_setup(int window_width, int window_height)
 
     Circle *c1 = (Circle *)malloc(sizeof(Circle));
     *c1 = circle_create(50.0);
-    app.b[app.n_bodies] = body_create(CIRCLE, c1, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    app.b[app.n_bodies] = body_create(CIRCLE, c1, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
     app.n_bodies++;
 
     Circle *c2 = (Circle *)malloc(sizeof(Circle));
@@ -106,6 +106,8 @@ void app_input()
 
 void app_update()
 {
+    gfx_clear_screen((uint8_t[3]){255, 255, 255});
+
     int time_to_wait = MILLISECONDS_PER_FRAME - (SDL_GetTicks() - time_previous_frame);
     if (time_to_wait > 0)
     {
@@ -146,10 +148,21 @@ void app_update()
             Body *a = &(app.b[i]);
             Body *b = &(app.b[j]);
 
-            if (collision(a, b))
+            Collision_Info info;
+
+            if (collision(a, b, &info))
             {
                 a->is_colliding = true;
                 b->is_colliding = true;
+
+                // printf("%f %f\n", info.start.x, info.start.y);
+
+                collision_info_resolve_penetration(&info);
+
+                gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
+                gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
+
+                gfx_draw_line(info.start.x, info.start.y, info.end.x, info.end.y, (uint8_t[3]){255, 0, 0});
             }
             else
             {
@@ -190,7 +203,7 @@ void app_update()
 
 void app_render()
 {
-    gfx_clear_screen((uint8_t[3]){255, 255, 255});
+    // gfx_clear_screen((uint8_t[3]){255, 255, 255});
 
     uint8_t not_collide_color[3] = {0, 0, 255};
     uint8_t collide_color[3] = {255, 0, 0};
