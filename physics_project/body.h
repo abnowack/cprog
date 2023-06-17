@@ -23,6 +23,8 @@ typedef struct {
 
     ShapeType shape_type;
     void *shape;
+
+    bool is_colliding;
 } Body;
 
 void body_clear_force(Body*);
@@ -63,6 +65,8 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
         b.inv_inertia = 0.0;
     }
     b.torque = 0.0;
+
+    b.is_colliding = false;
 
     return b;
 }

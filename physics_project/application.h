@@ -141,14 +141,20 @@ void app_update()
     // collision detection
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        for (unsigned int j = i+1; j < app.n_bodies; j++)
+        for (unsigned int j = i + 1; j < app.n_bodies; j++)
         {
             Body *a = &(app.b[i]);
             Body *b = &(app.b[j]);
 
             if (collision(a, b))
             {
-                printf("collide!\n");
+                a->is_colliding = true;
+                b->is_colliding = true;
+            }
+            else
+            {
+                a->is_colliding = false;
+                b->is_colliding = false;
             }
         }
     }
@@ -186,17 +192,29 @@ void app_render()
 {
     gfx_clear_screen((uint8_t[3]){255, 255, 255});
 
+    uint8_t not_collide_color[3] = {0, 0, 255};
+    uint8_t collide_color[3] = {255, 0, 0};
+
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
+        uint8_t draw_color[3] = {not_collide_color[0], not_collide_color[1], not_collide_color[2]};
+
+        if (app.b[i].is_colliding)
+        {
+            draw_color[0] = collide_color[0];
+            draw_color[1] = collide_color[1];
+            draw_color[2] = collide_color[2];
+        }
+
         if (app.b[i].shape_type == CIRCLE)
         {
             Circle *c = (Circle *)(app.b[i].shape);
-            gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, app.b[i].theta, (uint8_t[3]){255, 0, 255});
+            gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, app.b[i].theta, draw_color);
         }
         else if (app.b[i].shape_type == BOX)
         {
             Box *b = (Box *)(app.b[i].shape);
-            gfx_draw_polygon(app.b[i].position.x, app.b[i].position.y, b->global_vertices, b->n_vertices, (uint8_t[3]){255, 0, 255});
+            gfx_draw_polygon(app.b[i].position.x, app.b[i].position.y, b->global_vertices, b->n_vertices, draw_color);
         }
         else if (app.b[i].shape_type == POLYGON)
         {
