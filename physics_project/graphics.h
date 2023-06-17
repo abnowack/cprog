@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include "vec2.h"
 
 struct Graphics
 {
@@ -83,6 +84,17 @@ void gfx_draw_line(int x0, int y0, int x1, int y1, uint8_t color[3])
 {
     uint32_t rgba = (255 << 24) + (color[2] << 16) + (color[1] << 8) + color[0];
     lineColor(gfx.renderer, x0, y0, x1, y1, rgba);
+}
+
+void gfx_draw_polygon(int x, int y, vec2 *vertices, unsigned int n_vertices, uint8_t color[3])
+{
+    uint32_t rgba = (255 << 24) + (color[2] << 16) + (color[1] << 8) + color[0];
+    for (unsigned int i = 0; i < n_vertices; i++)
+    {
+        unsigned int next_index = (i + 1) % n_vertices;
+        lineColor(gfx.renderer, vertices[i].x, vertices[i].y, vertices[next_index].x, vertices[next_index].y, rgba);
+    }
+    filledCircleColor(gfx.renderer, x, y, 1, rgba);
 }
 
 #endif

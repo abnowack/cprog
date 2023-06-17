@@ -35,9 +35,14 @@ void app_setup(int window_width, int window_height)
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
 
-    Circle *c = (Circle *)malloc(sizeof(Circle));
-    *c = circle_create(50.0);
-    app.b[app.n_bodies] = body_create((Shape*)c, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    // Circle *c = (Circle *)malloc(sizeof(Circle));
+    // *c = circle_create(50.0);
+    // app.b[app.n_bodies] = body_create((Shape*)c, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    // app.n_bodies++;
+
+    Box *b = (Box *)malloc(sizeof(Box));
+    *b = box_create(200, 100);
+    app.b[app.n_bodies] = body_create((Shape*)b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
     app.n_bodies++;
 }
 
@@ -115,13 +120,16 @@ void app_update()
     {
         // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
         // Body_add_force(&(app.p[i]), wind);
-        vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
-        body_add_force(&(app.b[i]), gravity);
+        // vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
+        // body_add_force(&(app.b[i]), gravity);
+    
+        float torque = 2000;
+        body_add_torque(&(app.b[i]), torque);
     }
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        body_integrate(&(app.b[i]), delta_time);
+        body_update(&(app.b[i]), delta_time);
     }
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
@@ -162,7 +170,12 @@ void app_render()
         if (app.b[i].shape->type == CIRCLE)
         {
             Circle *c = (Circle *)(app.b[i].shape);
-            gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, 0.0, (uint8_t[3]){255, 0, 255});
+            gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, app.b[i].theta, (uint8_t[3]){255, 0, 255});
+        }
+        else if (app.b[i].shape->type == BOX)
+        {
+            Box *b = (Box *)(app.b[i].shape);
+            gfx_draw_polygon(app.b[i].position.x, app.b[i].position.y, b->global_vertices, b->n_vertices, (uint8_t[3]){255, 0, 255});
         }
     }
 

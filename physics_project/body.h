@@ -8,34 +8,64 @@ typedef struct {
     vec2 position;
     vec2 velocity;
     vec2 acceleration;
+
+    float theta;
+    float omega;
+    float alpha;
+
     float mass;
     float inv_mass;
     vec2 force;
+
+    float inertia;
+    float inv_inertia;
+    float torque;
 
     Shape *shape;
 } Body;
 
 void body_clear_force(Body*);
+void body_clear_torque(Body*);
 
 Body body_create(Shape *shape, float x_pos, float y_pos, float mass)
 {
     Body b;
+    
     b.position = (vec2){x_pos, y_pos};
     b.velocity = (vec2){0, 0};
     b.acceleration = (vec2){0, 0};
+    
     b.mass = mass;
     if (b.mass != 0.0)
     {
         b.inv_mass = 1.0 / b.mass;
     }
+    else
+    {
+        b.inv_mass = 0.0;
+    }
     b.force = (vec2){0, 0};
 
+    b.theta = 0;
+    b.omega = 0;
+    b.alpha = 0;
+
     b.shape = shape;
+    b.inertia = shape_moment_of_inertia(shape) * b.mass;
+    if (b.inertia != 0.0)
+    {
+        b.inv_inertia = 1.0 / b.inertia;
+    }
+    else
+    {
+        b.inv_inertia = 0.0;
+    }
+    b.torque = 0.0;
 
     return b;
 }
 
-void body_integrate(Body *b, float delta_time)
+void body_integrate_position(Body *b, float delta_time)
 {
     b->acceleration = vec2_scale(b->force, b->inv_mass);
 
@@ -47,6 +77,15 @@ void body_integrate(Body *b, float delta_time)
     body_clear_force(b);
 }
 
+void body_integrate_angle(Body *b, float delta_time)
+{
+    b->alpha = b->torque * b->inv_inertia;
+    b->omega += b->alpha * delta_time;
+    b->theta += b->omega * delta_time;
+
+    body_clear_torque(b);
+}
+
 void body_add_force(Body *b, vec2 force)
 {
     b->force = vec2_add(b->force, force);
@@ -55,6 +94,28 @@ void body_add_force(Body *b, vec2 force)
 void body_clear_force(Body *b)
 {
     b->force = (vec2){0, 0};
+}
+
+void body_add_torque(Body *b, float torque)
+{
+    b->torque += torque;
+}
+
+void body_clear_torque(Body *b)
+{
+    b->torque = 0.0f;
+}
+
+void body_update(Body *b, float delta_time)
+{
+    body_integrate_position(b, delta_time);
+    body_integrate_angle(b, delta_time);
+
+    if (b->shape->type == BOX)
+    {
+        Box *box = (Box*)b->shape;
+        box_update_vertices(b->theta, b->position, box);
+    }
 }
 
 #endif
