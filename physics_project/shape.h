@@ -24,16 +24,6 @@ typedef struct
     unsigned int n_vertices;
 } Polygon;
 
-typedef struct
-{
-    float width;
-    float height;
-
-    vec2 local_vertices[4];
-    vec2 global_vertices[4];
-    unsigned int n_vertices;
-} Box;
-
 Circle circle_create(float radius)
 {
     Circle c;
@@ -41,21 +31,19 @@ Circle circle_create(float radius)
     return c;
 }
 
-Box box_create(float width, float height)
+Polygon box_create(float width, float height)
 {
-    Box b;
-    b.width = width;
-    b.height = height;
+    Polygon b;
 
     b.n_vertices = 4;
-    b.local_vertices[0] = (vec2){-b.width / 2.0, -height / 2.0};
-    b.local_vertices[1] = (vec2){b.width / 2.0, -height / 2.0};
-    b.local_vertices[2] = (vec2){b.width / 2.0, height / 2.0};
-    b.local_vertices[3] = (vec2){-b.width / 2.0, height / 2.0};
-    b.global_vertices[0] = (vec2){-b.width / 2.0, -height / 2.0};
-    b.global_vertices[1] = (vec2){b.width / 2.0, -height / 2.0};
-    b.global_vertices[2] = (vec2){b.width / 2.0, height / 2.0};
-    b.global_vertices[3] = (vec2){-b.width / 2.0, height / 2.0};
+    b.local_vertices[0] = (vec2){-width / 2.0, -height / 2.0};
+    b.local_vertices[1] = (vec2){width / 2.0, -height / 2.0};
+    b.local_vertices[2] = (vec2){width / 2.0, height / 2.0};
+    b.local_vertices[3] = (vec2){-width / 2.0, height / 2.0};
+    b.global_vertices[0] = (vec2){-width / 2.0, -height / 2.0};
+    b.global_vertices[1] = (vec2){width / 2.0, -height / 2.0};
+    b.global_vertices[2] = (vec2){width / 2.0, height / 2.0};
+    b.global_vertices[3] = (vec2){-width / 2.0, height / 2.0};
 
     return b;
 }
@@ -80,15 +68,6 @@ void polygon_update_vertices(float theta, vec2 position, Polygon *p)
     }
 }
 
-void box_update_vertices(float theta, vec2 position, Box *b)
-{
-    for (unsigned int i = 0; i < b->n_vertices; i++)
-    {
-        b->global_vertices[i] = vec2_rotate_rad(b->local_vertices[i], theta);
-        b->global_vertices[i] = vec2_add(b->global_vertices[i], position);
-    }
-}
-
 float shape_moment_of_inertia(ShapeType shape_type, void *shape)
 {
     float inertia = 0;
@@ -99,8 +78,10 @@ float shape_moment_of_inertia(ShapeType shape_type, void *shape)
         inertia = 0.5 * c->radius * c->radius;
         break;
     case BOX:;
-        Box *b = (Box *)shape;
-        inertia = (1.0 / 12.0) * (b->width * b->width + b->height * b->height);
+        Polygon *b = (Polygon *)shape;
+        float width = b->local_vertices[1].x - b->local_vertices[0].x;
+        float height = b->local_vertices[2].y - b->local_vertices[1].y;
+        inertia = (1.0 / 12.0) * (width * width + height * height);
         break;
     case POLYGON:
         break;

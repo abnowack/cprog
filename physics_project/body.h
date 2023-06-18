@@ -25,6 +25,7 @@ typedef struct {
     void *shape;
 
     bool is_colliding;
+    float restitution;
 } Body;
 
 void body_clear_force(Body*);
@@ -67,6 +68,7 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
     b.torque = 0.0;
 
     b.is_colliding = false;
+    b.restitution = 1.0;
 
     return b;
 }
@@ -121,16 +123,20 @@ void body_clear_torque(Body *b)
     b->torque = 0.0f;
 }
 
+void body_apply_impulse(Body *b, vec2 j)
+{
+    if (b->inv_mass == 0)
+        return;
+    
+    b->velocity = vec2_add(b->velocity, vec2_scale(j, b->inv_mass));
+}
+
 void body_update(Body *b, float delta_time)
 {
     body_integrate_position(b, delta_time);
     body_integrate_angle(b, delta_time);
 
-    if (b->shape_type == BOX)
-    {
-        box_update_vertices(b->theta, b->position, (Box*)b->shape);
-    }
-    else if (b->shape_type == POLYGON)
+    if (b->shape_type == BOX || b->shape_type == POLYGON)
     {
         polygon_update_vertices(b->theta, b->position, (Polygon*)(b->shape));
     }

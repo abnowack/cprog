@@ -36,20 +36,25 @@ void app_setup(int window_width, int window_height)
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
 
-    Circle *c1 = (Circle *)malloc(sizeof(Circle));
-    *c1 = circle_create(50.0);
-    app.b[app.n_bodies] = body_create(CIRCLE, c1, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
-    app.n_bodies++;
-
-    Circle *c2 = (Circle *)malloc(sizeof(Circle));
-    *c2 = circle_create(100.0);
-    app.b[app.n_bodies] = body_create(CIRCLE, c2, 150, 200, 1.0);
-    app.n_bodies++;
-
-    // Box *b = (Box *)malloc(sizeof(Box));
-    // *b = box_create(200, 100);
-    // app.b[app.n_bodies] = body_create(BOX, b, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    // Circle *c1 = (Circle *)malloc(sizeof(Circle));
+    // *c1 = circle_create(100.0);
+    // app.b[app.n_bodies] = body_create(CIRCLE, c1, gfx.window_width / 2.0, gfx.window_height / 2.0, 4.0);
     // app.n_bodies++;
+
+    // Circle *c2 = (Circle *)malloc(sizeof(Circle));
+    // *c2 = circle_create(50.0);
+    // app.b[app.n_bodies] = body_create(CIRCLE, c2, 150, 200, 1.0);
+    // app.n_bodies++;
+
+    Polygon *b1 = (Polygon *)malloc(sizeof(Polygon));
+    *b1 = box_create(200, 100);
+    app.b[app.n_bodies] = body_create(BOX, b1, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    app.n_bodies++;
+
+    Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
+    *b2 = box_create(100, 300);
+    app.b[app.n_bodies] = body_create(BOX, b2, gfx.window_width / 2.0 + 200, gfx.window_height / 2.0, 1.0);
+    app.n_bodies++;
 }
 
 void app_input()
@@ -126,10 +131,10 @@ void app_update()
     // apply forces
     for (unsigned int i = 0; i < app.n_bodies; i++)
     {
-        vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
-        body_add_force(&(app.b[i]), wind);
-        vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
-        body_add_force(&(app.b[i]), gravity);
+        // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
+        // body_add_force(&(app.b[i]), wind);
+        // vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
+        // body_add_force(&(app.b[i]), gravity);
 
         float torque = 2000;
         body_add_torque(&(app.b[i]), torque);
@@ -155,9 +160,7 @@ void app_update()
                 a->is_colliding = true;
                 b->is_colliding = true;
 
-                // printf("%f %f\n", info.start.x, info.start.y);
-
-                collision_info_resolve_penetration(&info);
+                collision_info_resolve_collision(&info);
 
                 gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
                 gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
@@ -224,13 +227,10 @@ void app_render()
             Circle *c = (Circle *)(app.b[i].shape);
             gfx_draw_circle(app.b[i].position.x, app.b[i].position.y, c->radius, app.b[i].theta, draw_color);
         }
-        else if (app.b[i].shape_type == BOX)
+        else if (app.b[i].shape_type == BOX || app.b[i].shape_type == POLYGON)
         {
-            Box *b = (Box *)(app.b[i].shape);
+            Polygon *b = (Polygon *)(app.b[i].shape);
             gfx_draw_polygon(app.b[i].position.x, app.b[i].position.y, b->global_vertices, b->n_vertices, draw_color);
-        }
-        else if (app.b[i].shape_type == POLYGON)
-        {
         }
         else
         {

@@ -64,7 +64,7 @@ vec2 vec2_normal(vec2 v1)
 
 float vec2_dot(vec2 v1, vec2 v2)
 {
-    return v1.x * v2.x + v1.y + v2.y;
+    return v1.x * v2.x + v1.y * v2.y;
 }
 
 float vec2_cross(vec2 v1, vec2 v2)

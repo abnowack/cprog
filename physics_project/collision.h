@@ -6,6 +6,7 @@
 #include "vec2.h"
 
 #include <stdio.h>
+#include <float.h>
 
 typedef struct 
 {
@@ -20,12 +21,17 @@ typedef struct
 
 
 bool collision_circle_circle(Body *, Body *, Collision_Info *);
+bool collision_polygon_polygon(Body *, Body *, Collision_Info *);
 
 bool collision(Body *a, Body *b, Collision_Info *info)
 {
     if (a->shape_type == CIRCLE && b->shape_type == CIRCLE)
     {
         return collision_circle_circle(a, b, info);
+    }
+    else if ((a->shape_type == POLYGON || a->shape_type == BOX) && (b->shape_type == POLYGON && b->shape_type == BOX))
+    {
+        return collision_polygon_polygon(a, b, info);
     }
     else
     {
@@ -63,6 +69,16 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info *info)
     }
 }
 
+float collision_find_minimum_separation(Body *a, Body *b)
+{
+    float separation = FLT_EPSILON;
+}
+
+bool collision_polygon_polygon(Body *a, Body *b, Collision_Info *info)
+{
+
+}
+
 void collision_info_resolve_penetration(Collision_Info *info)
 {
     if (info->a->inv_mass == 0 && info->b->inv_mass == 0)
@@ -73,6 +89,27 @@ void collision_info_resolve_penetration(Collision_Info *info)
 
     info->a->position = vec2_sub(info->a->position, vec2_scale(info->normal, da));
     info->b->position = vec2_add(info->b->position, vec2_scale(info->normal, db));
+}
+
+void collision_info_resolve_collision(Collision_Info *info)
+{
+    collision_info_resolve_penetration(info);
+
+    float e = info->a->restitution;
+    if (info->b->restitution < info->a->restitution)
+        e = info->b->restitution;
+    
+    vec2 v_rel = vec2_sub(info->a->velocity, info->b->velocity);
+
+    float dot = vec2_dot(v_rel, info->normal);
+
+    float impulse_magnitude = -(1.0 + e) * dot / (info->a->inv_mass + info->b->inv_mass);
+    vec2 impulse_direction = info->normal;
+
+    vec2 j = vec2_scale(impulse_direction, impulse_magnitude);
+
+    body_apply_impulse(info->a, j);
+    body_apply_impulse(info->b, vec2_scale(j, -1.0));
 }
 
 #endif
