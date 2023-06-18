@@ -29,7 +29,7 @@ bool collision(Body *a, Body *b, Collision_Info *info)
     {
         return collision_circle_circle(a, b, info);
     }
-    else if ((a->shape_type == POLYGON || a->shape_type == BOX) && (b->shape_type == POLYGON && b->shape_type == BOX))
+    else if ((a->shape_type == POLYGON || a->shape_type == BOX) && (b->shape_type == POLYGON || b->shape_type == BOX))
     {
         return collision_polygon_polygon(a, b, info);
     }
@@ -69,14 +69,44 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info *info)
     }
 }
 
-float collision_find_minimum_separation(Body *a, Body *b)
+float collision_find_minimum_separation(Polygon *a, Polygon *b)
 {
-    float separation = FLT_EPSILON;
+    float separation = -FLT_MAX;
+
+    for (unsigned int i = 0; i < a->n_vertices; i++) {
+        vec2 va = a->global_vertices[i];
+        vec2 normal = vec2_normal(polygon_edge_at(a, i));
+
+        float min_separation = FLT_MAX;
+
+        for (int j = 0; j < b->n_vertices; j++)
+        {
+            vec2 vb = b->global_vertices[j];
+            
+            float this_separation = vec2_dot(vec2_sub(vb, va), normal);
+            if (this_separation < min_separation)
+                min_separation = this_separation;
+        }
+        if (min_separation > separation)
+            separation = min_separation;
+    }
+    return separation;
 }
 
 bool collision_polygon_polygon(Body *a, Body *b, Collision_Info *info)
 {
+    float sep_ab = collision_find_minimum_separation((Polygon*)a->shape, (Polygon*)b->shape);
+    float sep_ba = collision_find_minimum_separation((Polygon*)b->shape, (Polygon*)a->shape);
 
+    if (sep_ab >= 0)
+    {
+        return false;
+    }
+    if (sep_ba >= 0)
+    {
+        return false;
+    }
+    return true;
 }
 
 void collision_info_resolve_penetration(Collision_Info *info)

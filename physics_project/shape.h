@@ -90,4 +90,10 @@ float shape_moment_of_inertia(ShapeType shape_type, void *shape)
     return inertia;
 }
 
+vec2 polygon_edge_at(Polygon *p, unsigned int index)
+{
+    unsigned int next_index = (index + 1) % (p->n_vertices);
+    return vec2_sub(p->global_vertices[next_index], p->global_vertices[index]);
+}
+
 #endif

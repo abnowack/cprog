@@ -50,6 +50,7 @@ void app_setup(int window_width, int window_height)
     *b1 = box_create(200, 100);
     app.b[app.n_bodies] = body_create(BOX, b1, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
     app.n_bodies++;
+    printf("%d", app.b[app.n_bodies - 1].shape_type);
 
     Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
     *b2 = box_create(100, 300);
@@ -160,12 +161,12 @@ void app_update()
                 a->is_colliding = true;
                 b->is_colliding = true;
 
-                collision_info_resolve_collision(&info);
+                // collision_info_resolve_collision(&info);
 
-                gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
-                gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
+                // gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
+                // gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
 
-                gfx_draw_line(info.start.x, info.start.y, info.end.x, info.end.y, (uint8_t[3]){255, 0, 0});
+                // gfx_draw_line(info.start.x, info.start.y, info.end.x, info.end.y, (uint8_t[3]){255, 0, 0});
             }
             else
             {
