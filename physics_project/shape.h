@@ -55,6 +55,7 @@ Polygon polygon_create(vec2 *vertices, unsigned int n_vertices)
     for (unsigned int i = 0; i < n_vertices; i++)
     {
         p.local_vertices[i] = vertices[i];
+        p.global_vertices[i] = vertices[i];
     }
     return p;
 }
@@ -84,6 +85,7 @@ float shape_moment_of_inertia(ShapeType shape_type, void *shape)
         inertia = (1.0 / 12.0) * (width * width + height * height);
         break;
     case POLYGON:
+        inertia = 500;
         break;
     }
 

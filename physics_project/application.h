@@ -11,17 +11,20 @@
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 #define PIXELS_PER_METER 50
 
-#define MAX_BODIES 10
+#define MAX_BODIES 40
 
 struct Application
 {
     bool running;
+    bool debug;
 
     Body b[MAX_BODIES];
     unsigned int n_bodies;
 
     vec2 mouse_cursor_pos;
     bool mouse_button_down;
+
+    ShapeType new_shape_type;
 };
 
 int time_previous_frame;
@@ -31,10 +34,12 @@ struct Application app = {.running = false};
 void app_setup(int window_width, int window_height)
 {
     app.running = gfx_create_window(window_width, window_height);
+    app.debug = false;
     app.n_bodies = 0;
     time_previous_frame = 0;
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
+    app.new_shape_type = CIRCLE;
 
     // Circle *c1 = (Circle *)malloc(sizeof(Circle));
     // *c1 = circle_create(100.0);
@@ -46,15 +51,30 @@ void app_setup(int window_width, int window_height)
     // app.b[app.n_bodies] = body_create(CIRCLE, c2, 150, 200, 1.0);
     // app.n_bodies++;
 
-    Polygon *b1 = (Polygon *)malloc(sizeof(Polygon));
-    *b1 = box_create(200, 100);
-    app.b[app.n_bodies] = body_create(BOX, b1, gfx.window_width / 2.0, gfx.window_height / 2.0, 1.0);
+    Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
+    *floor = box_create(gfx.window_width - 50, 25);
+    app.b[app.n_bodies] = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
+    app.b[app.n_bodies].restitution = 0.2;
     app.n_bodies++;
-    printf("%d", app.b[app.n_bodies - 1].shape_type);
+
+    Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
+    *left_wall = box_create(25, gfx.window_height - 50);
+    app.b[app.n_bodies] = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
+    app.b[app.n_bodies].restitution = 0.2;
+    app.n_bodies++;
+
+    Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
+    *right_wall = box_create(25, gfx.window_height - 50);
+    app.b[app.n_bodies] = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
+    app.b[app.n_bodies].restitution = 0.2;
+    app.n_bodies++;
 
     Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
-    *b2 = box_create(100, 300);
-    app.b[app.n_bodies] = body_create(BOX, b2, gfx.window_width / 2.0 + 200, gfx.window_height / 2.0, 1.0);
+    *b2 = box_create(150, 150);
+    app.b[app.n_bodies] = body_create(BOX, b2, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
+    app.b[app.n_bodies].theta = M_PI / 6;
+    app.b[app.n_bodies].restitution = 0.5;
+    app.b[app.n_bodies].omega = 1.0;
     app.n_bodies++;
 }
 
@@ -71,6 +91,14 @@ void app_input()
         case SDL_KEYDOWN:
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 app.running = false;
+            if (event.key.keysym.sym == SDLK_d)
+                app.debug = !app.debug;
+            if (event.key.keysym.sym == SDLK_1)
+                app.new_shape_type = CIRCLE;
+            if (event.key.keysym.sym == SDLK_2)
+                app.new_shape_type = BOX;
+            if (event.key.keysym.sym == SDLK_3)
+                app.new_shape_type = POLYGON;
             break;
         case SDL_KEYUP:
             break;
@@ -86,13 +114,42 @@ void app_input()
                 SDL_GetMouseState(&x, &y);
                 app.mouse_cursor_pos.x = x;
                 app.mouse_cursor_pos.y = y;
-                // if (app.n_Bodys < MAX_BodyS)
-                // {
-                //     app.p[app.n_Bodys] = Body_create(x, y, 1.0);
-                //     app.p[app.n_Bodys].radius = 4;
-                //     app.p[app.n_Bodys].frozen = true;
-                //     app.n_Bodys++;
-                // }
+                if (app.n_bodies < MAX_BODIES)
+                {
+                    if (app.new_shape_type == CIRCLE)
+                    {
+                    Circle *c = (Circle *)malloc(sizeof(Circle));
+                    *c = circle_create(40.0);
+                    app.b[app.n_bodies] = body_create(CIRCLE, c, x, y, 1.0);
+                    app.b[app.n_bodies].restitution = 0.3;
+                    app.b[app.n_bodies].friction = 0.4;
+                    app.n_bodies++;
+                    }
+                    else if (app.new_shape_type == BOX)
+                    {
+                        Polygon *b = (Polygon *)malloc(sizeof(Polygon));
+                        *b = box_create(50, 50);
+                        app.b[app.n_bodies] = body_create(BOX, b, x, y, 1.0);
+                        app.b[app.n_bodies].restitution = 0.3;
+                        app.b[app.n_bodies].friction = 0.4;
+                        app.n_bodies++;
+                    }
+                    else if (app.new_shape_type == POLYGON)
+                    {
+                        Polygon *b = (Polygon *)malloc(sizeof(Polygon));
+                        vec2 points[5];
+                        points[0] = (vec2){20, 60};
+                        points[1] = (vec2){-40, 20};
+                        points[2] = (vec2){-20, -60};
+                        points[3] = (vec2){20, -60};
+                        points[4] = (vec2){40, 20};
+                        *b = polygon_create(points, 5);
+                        app.b[app.n_bodies] = body_create(POLYGON, b, x, y, 1.0);
+                        app.b[app.n_bodies].restitution = 0.1;
+                        app.b[app.n_bodies].friction = 0.7;
+                        app.n_bodies++;
+                    }
+                }
             }
             break;
         case SDL_MOUSEBUTTONUP:
@@ -134,11 +191,11 @@ void app_update()
     {
         // vec2 wind = {2.0 * PIXELS_PER_METER, 0.0};
         // body_add_force(&(app.b[i]), wind);
-        // vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
-        // body_add_force(&(app.b[i]), gravity);
+        vec2 gravity = {0.0, app.b[i].mass * 9.8 * PIXELS_PER_METER};
+        body_add_force(&(app.b[i]), gravity);
 
-        float torque = 2000;
-        body_add_torque(&(app.b[i]), torque);
+        // float torque = 2000;
+        // body_add_torque(&(app.b[i]), torque);
     }
 
     for (unsigned int i = 0; i < app.n_bodies; i++)
@@ -161,45 +218,23 @@ void app_update()
                 a->is_colliding = true;
                 b->is_colliding = true;
 
-                // collision_info_resolve_collision(&info);
+                collision_info_resolve_collision(&info);
 
-                // gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
-                // gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
+                if (app.debug)
+                {
+                    gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
+                    gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
 
-                // gfx_draw_line(info.start.x, info.start.y, info.end.x, info.end.y, (uint8_t[3]){255, 0, 0});
+                    vec2 dir = vec2_unitvector(vec2_sub(info.end, info.start));
+                    vec2 end = vec2_add(info.start, vec2_scale(dir, 20.0));
+
+                    gfx_draw_line(info.start.x, info.start.y, end.x, end.y, (uint8_t[3]){255, 0, 0});
+                }
             }
             else
             {
                 a->is_colliding = false;
                 b->is_colliding = false;
-            }
-        }
-    }
-
-    for (unsigned int i = 0; i < app.n_bodies; i++)
-    {
-        if (app.b[i].shape_type == CIRCLE)
-        {
-            Circle *c = (Circle *)(app.b[i].shape);
-            if (app.b[i].position.x - c->radius <= 0)
-            {
-                app.b[i].position.x = c->radius;
-                app.b[i].velocity.x *= -1.0;
-            }
-            else if (app.b[i].position.x + c->radius >= gfx.window_width)
-            {
-                app.b[i].position.x = gfx.window_width - c->radius;
-                app.b[i].velocity.x *= -1.0;
-            }
-            if (app.b[i].position.y - c->radius <= 0)
-            {
-                app.b[i].position.y = c->radius;
-                app.b[i].velocity.y *= -1.0;
-            }
-            else if (app.b[i].position.y + c->radius >= gfx.window_height)
-            {
-                app.b[i].position.y = gfx.window_height - c->radius;
-                app.b[i].velocity.y *= -1.0;
             }
         }
     }
@@ -216,7 +251,7 @@ void app_render()
     {
         uint8_t draw_color[3] = {not_collide_color[0], not_collide_color[1], not_collide_color[2]};
 
-        if (app.b[i].is_colliding)
+        if (app.b[i].is_colliding && app.debug)
         {
             draw_color[0] = collide_color[0];
             draw_color[1] = collide_color[1];
@@ -237,11 +272,6 @@ void app_render()
         {
         }
     }
-
-    // if (app.mouse_button_down)
-    // {
-    // gfx_draw_line(app.p[app.n_Bodys - 1].position.x, app.p[app.n_Bodys - 1].position.y, app.mouse_cursor_pos.x, app.mouse_cursor_pos.y, (uint8_t[3]){255, 0, 0});
-    // }
 
     gfx_render_frame();
 }

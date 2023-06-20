@@ -28,7 +28,7 @@ bool gfx_create_window(int window_width, int window_height)
     SDL_GetCurrentDisplayMode(0, &display_mode);
     gfx.window_width = window_width;
     gfx.window_height = window_height;
-    gfx.window = SDL_CreateWindow(NULL, 0, 0, gfx.window_width, gfx.window_height, SDL_WINDOW_BORDERLESS);
+    gfx.window = SDL_CreateWindow(NULL, 0, 0, gfx.window_width, gfx.window_height, SDL_WINDOW_RESIZABLE);
     if (!gfx.window)
     {
         fprintf(stderr, "Error creating SDL window\n");
@@ -94,7 +94,7 @@ void gfx_draw_polygon(int x, int y, vec2 *vertices, unsigned int n_vertices, uin
         unsigned int next_index = (i + 1) % n_vertices;
         lineColor(gfx.renderer, vertices[i].x, vertices[i].y, vertices[next_index].x, vertices[next_index].y, rgba);
     }
-    filledCircleColor(gfx.renderer, x, y, 1, rgba);
+    filledCircleColor(gfx.renderer, x, y, 3, rgba);
 }
 
 #endif

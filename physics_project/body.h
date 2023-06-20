@@ -26,6 +26,7 @@ typedef struct {
 
     bool is_colliding;
     float restitution;
+    float friction;
 } Body;
 
 void body_clear_force(Body*);
@@ -69,6 +70,7 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
 
     b.is_colliding = false;
     b.restitution = 1.0;
+    b.friction = 0.7;
 
     return b;
 }
@@ -129,6 +131,15 @@ void body_apply_impulse(Body *b, vec2 j)
         return;
     
     b->velocity = vec2_add(b->velocity, vec2_scale(j, b->inv_mass));
+}
+
+void body_apply_impulse_at_r(Body *b, vec2 j, vec2 r)
+{
+    if (b->inv_mass == 0)
+        return;
+    
+    b->velocity = vec2_add(b->velocity, vec2_scale(j, b->inv_mass));
+    b->omega += vec2_cross(r, j) * b->inv_inertia;
 }
 
 void body_update(Body *b, float delta_time)
