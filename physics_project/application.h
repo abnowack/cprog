@@ -11,7 +11,6 @@
 #define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 
-
 struct Application
 {
     bool running;
@@ -38,19 +37,35 @@ void app_setup(int window_width, int window_height)
     app.mouse_button_down = false;
     app.new_shape_type = CIRCLE;
 
-    Circle *c1 = (Circle *)malloc(sizeof(Circle));
-    *c1 = circle_create(30.0);
-    Body b1 = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
-    world_add_body(&app.world, &b1);
+    Circle *c = (Circle *)malloc(sizeof(Circle));
+    Body b;
 
-    Circle *c2 = (Circle *)malloc(sizeof(Circle));
-    *c2 = circle_create(20.0);
-    Body b2 = body_create(CIRCLE, c2, b1.position.x - 100, b1.position.y, 1.0);
-    world_add_body(&app.world, &b2);
+    *c = circle_create(30.0);
+    b = body_create(CIRCLE, c, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    world_add_body(&app.world, &b);
+
+    *c = circle_create(20.0);
+    b = body_create(CIRCLE, c, app.world.b[0].position.x - 100, app.world.b[0].position.y, 1.0);
+    world_add_body(&app.world, &b);
+
+    *c = circle_create(20.0);
+    b = body_create(CIRCLE, c, app.world.b[1].position.x - 100, app.world.b[1].position.y, 1.0);
+    world_add_body(&app.world, &b);
+
+    *c = circle_create(20.0);
+    b = body_create(CIRCLE, c, app.world.b[2].position.x - 100, app.world.b[2].position.y, 1.0);
+    world_add_body(&app.world, &b);
 
     JointConstraint *jc = (JointConstraint*)malloc(sizeof(JointConstraint));
     joint_constraint_create(jc, &app.world.b[0], &app.world.b[1], app.world.b[0].position);
+    world_add_joint_constraints(&app.world, jc);
 
+    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, &app.world.b[1], &app.world.b[2], app.world.b[1].position);
+    world_add_joint_constraints(&app.world, jc);
+
+    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, &app.world.b[2], &app.world.b[3], app.world.b[2].position);
     world_add_joint_constraints(&app.world, jc);
 
     // Polygon *floor = (Polygon *)malloc(sizeof(Polygon));

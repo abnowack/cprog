@@ -88,7 +88,20 @@ void world_update(World *w, float delta_time)
 
     for (unsigned int i = 0; i < w->n_joint_constraints; i++)
     {
-        joint_constraint_solve(w->joint_constraints[i]);
+        joint_constraint_pre_solve(w->joint_constraints[i], delta_time);
+    }
+
+    for (unsigned int iter = 0; iter < 5; iter++)
+    {
+        for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+        {
+            joint_constraint_solve(w->joint_constraints[i]);
+        }
+    }
+
+    for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+    {
+        joint_constraint_post_solve(w->joint_constraints[i]);
     }
 
     for (unsigned int i = 0; i < w->n_bodies; i++)
