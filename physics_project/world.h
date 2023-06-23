@@ -3,10 +3,12 @@
 
 #include "body.h"
 #include "collision.h"
+#include "constraint.h"
 
 #define MAX_BODIES 40
 #define MAX_FORCES 20
 #define MAX_TORQUES 20
+#define MAX_CONSTRAINTS 100
 
 #define PIXELS_PER_METER 50
 
@@ -21,6 +23,9 @@ typedef struct {
 
     float torques[MAX_TORQUES];
     unsigned int n_torques;
+
+    JointConstraint* joint_constraints[MAX_CONSTRAINTS];
+    unsigned int n_joint_constraints;
 } World;
 
 void world_check_collisions(World *w);
@@ -31,6 +36,7 @@ void world_create(World *w, float gravity)
     w->n_bodies = 0;
     w->n_forces = 0;
     w->n_torques = 0;
+    w->n_joint_constraints = 0;
 }
 
 void world_add_body(World *w, Body *b)
@@ -49,6 +55,12 @@ void world_add_torque(World *w, float torque)
 {
     w->torques[w->n_torques] = torque;
     w->n_torques++;
+}
+
+void world_add_joint_constraints(World *w, JointConstraint *jc)
+{
+    w->joint_constraints[w->n_joint_constraints] = jc;
+    w->n_joint_constraints++;
 }
 
 void world_update(World *w, float delta_time)
@@ -71,7 +83,17 @@ void world_update(World *w, float delta_time)
 
     for (unsigned int i = 0; i < w->n_bodies; i++)
     {
-        body_update(&w->b[i], delta_time);
+        body_integrate_forces(&w->b[i], delta_time);
+    }
+
+    for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+    {
+        joint_constraint_solve(w->joint_constraints[i]);
+    }
+
+    for (unsigned int i = 0; i < w->n_bodies; i++)
+    {
+        body_integrate_velocities(&w->b[i], delta_time);
     }
 
     world_check_collisions(w);

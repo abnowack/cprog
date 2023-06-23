@@ -26,9 +26,9 @@ bool gfx_create_window(int window_width, int window_height)
     }
     SDL_DisplayMode display_mode;
     SDL_GetCurrentDisplayMode(0, &display_mode);
-    gfx.window_width = window_width;
-    gfx.window_height = window_height;
-    gfx.window = SDL_CreateWindow(NULL, 0, 0, gfx.window_width, gfx.window_height, SDL_WINDOW_RESIZABLE);
+    gfx.window_width = display_mode.w;
+    gfx.window_height = display_mode.h;
+    gfx.window = SDL_CreateWindow(NULL, 0, 0, gfx.window_width, gfx.window_height, SDL_WINDOW_BORDERLESS);
     if (!gfx.window)
     {
         fprintf(stderr, "Error creating SDL window\n");

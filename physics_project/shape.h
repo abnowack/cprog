@@ -60,12 +60,18 @@ Polygon polygon_create(vec2 *vertices, unsigned int n_vertices)
     return p;
 }
 
-void polygon_update_vertices(float theta, vec2 position, Polygon *p)
+void shape_update_vertices(float theta, vec2 position, ShapeType shape_type, void *shape)
 {
-    for (unsigned int i = 0; i < p->n_vertices; i++)
+    if (shape_type == CIRCLE)
+        return;
+    else if (shape_type == BOX || shape_type == POLYGON)
     {
-        p->global_vertices[i] = vec2_rotate_rad(p->local_vertices[i], theta);
-        p->global_vertices[i] = vec2_add(p->global_vertices[i], position);
+        Polygon *p = (Polygon*)shape;
+        for (unsigned int i = 0; i < p->n_vertices; i++)
+        {
+            p->global_vertices[i] = vec2_rotate_rad(p->local_vertices[i], theta);
+            p->global_vertices[i] = vec2_add(p->global_vertices[i], position);
+        }
     }
 }
 

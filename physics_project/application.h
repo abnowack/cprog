@@ -33,37 +33,51 @@ void app_setup(int window_width, int window_height)
     app.running = gfx_create_window(window_width, window_height);
     app.debug = false;
     world_create(&app.world, -9.8f);
-    printf("%f\n", app.world.G);
     time_previous_frame = 0;
     app.mouse_cursor_pos = (vec2){0, 0};
     app.mouse_button_down = false;
     app.new_shape_type = CIRCLE;
 
-    Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
-    *floor = box_create(gfx.window_width - 50, 25);
-    Body b = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
-    b.restitution = 0.2;
-    world_add_body(&app.world, &b);
+    Circle *c1 = (Circle *)malloc(sizeof(Circle));
+    *c1 = circle_create(30.0);
+    Body b1 = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    world_add_body(&app.world, &b1);
 
-    Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
-    *left_wall = box_create(25, gfx.window_height - 50);
-    b = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
-    b.restitution = 0.2;
-    world_add_body(&app.world, &b);
+    Circle *c2 = (Circle *)malloc(sizeof(Circle));
+    *c2 = circle_create(20.0);
+    Body b2 = body_create(CIRCLE, c2, b1.position.x - 100, b1.position.y, 1.0);
+    world_add_body(&app.world, &b2);
 
-    Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
-    *right_wall = box_create(25, gfx.window_height - 50);
-    b = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
-    b.restitution = 0.2;
-    world_add_body(&app.world, &b);
+    JointConstraint *jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, &app.world.b[0], &app.world.b[1], app.world.b[0].position);
 
-    Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
-    *b2 = box_create(150, 150);
-    b = body_create(BOX, b2, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
-    b.theta = M_PI / 6;
-    b.restitution = 0.5;
-    b.omega = 1.0;
-    world_add_body(&app.world, &b);
+    world_add_joint_constraints(&app.world, jc);
+
+    // Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
+    // *floor = box_create(gfx.window_width - 50, 25);
+    // Body b = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
+    // b.restitution = 0.2;
+    // world_add_body(&app.world, &b);
+
+    // Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
+    // *left_wall = box_create(25, gfx.window_height - 50);
+    // b = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
+    // b.restitution = 0.2;
+    // world_add_body(&app.world, &b);
+
+    // Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
+    // *right_wall = box_create(25, gfx.window_height - 50);
+    // b = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
+    // b.restitution = 0.2;
+    // world_add_body(&app.world, &b);
+
+    // Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
+    // *b2 = box_create(150, 150);
+    // b = body_create(BOX, b2, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
+    // b.theta = M_PI / 6;
+    // b.restitution = 0.5;
+    // b.omega = 1.0;
+    // world_add_body(&app.world, &b);
 }
 
 void app_input()
@@ -167,9 +181,9 @@ void app_update()
     }
 
     float delta_time = (SDL_GetTicks() - time_previous_frame) / 1000.0f;
-    if (delta_time > 0.0333)
+    if (delta_time > 0.016)
     {
-        delta_time = 0.0333;
+        delta_time = 0.016;
     }
 
     time_previous_frame = SDL_GetTicks();
@@ -208,6 +222,13 @@ void app_render()
         else
         {
         }
+    }
+
+    for (unsigned int i = 0; i < app.world.n_joint_constraints; i++)
+    {
+        vec2 pa = body_local_to_global_space(app.world.joint_constraints[i]->a, app.world.joint_constraints[i]->a_local_anchor);
+        vec2 pb = body_local_to_global_space(app.world.joint_constraints[i]->b, app.world.joint_constraints[i]->a_local_anchor);
+        gfx_draw_line(pa.x, pa.y, pb.x, pb.y, collide_color);
     }
 
     gfx_render_frame();

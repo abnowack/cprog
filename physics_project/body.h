@@ -4,7 +4,8 @@
 #include "vec2.h"
 #include "shape.h"
 
-typedef struct {
+typedef struct
+{
     vec2 position;
     vec2 velocity;
     vec2 acceleration;
@@ -29,17 +30,17 @@ typedef struct {
     float friction;
 } Body;
 
-void body_clear_force(Body*);
-void body_clear_torque(Body*);
+void body_clear_force(Body *);
+void body_clear_torque(Body *);
 
 Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, float mass)
 {
     Body b;
-    
+
     b.position = (vec2){x_pos, y_pos};
     b.velocity = (vec2){0, 0};
     b.acceleration = (vec2){0, 0};
-    
+
     b.mass = mass;
     if (b.mass != 0.0)
     {
@@ -70,39 +71,58 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
 
     b.is_colliding = false;
     b.restitution = 1.0;
-    b.friction = 0.7;
+    b.friction = 0.0;
+
+    shape_update_vertices(b.theta, b.position, b.shape_type, &b.shape);
 
     return b;
 }
 
-void body_integrate_position(Body *b, float delta_time)
+vec2 body_local_to_global_space(Body *b, vec2 point)
+{
+    vec2 rotated = vec2_rotate_rad(point, b->theta);
+    return vec2_add(rotated, b->position);
+}
+
+vec2 body_global_to_local_space(Body *b, vec2 point)
+{
+    float translated_dx = point.x - b->position.x;
+    float translated_dy = point.y - b->position.y;
+    float rotated_x = cosf(-b->theta) * translated_dx - sinf(-b->theta) * translated_dy;
+    float rotated_y = cosf(-b->theta) * translated_dy + sinf(-b->theta) * translated_dx;
+
+    return (vec2){rotated_x, rotated_y};
+}
+
+void body_integrate_forces(Body *b, float delta_time)
 {
     if (b->inv_mass == 0)
         return;
 
     b->acceleration = vec2_scale(b->force, b->inv_mass);
-
     vec2 dv = vec2_scale(b->acceleration, delta_time);
     b->velocity = vec2_add(b->velocity, dv);
-    vec2 dx = vec2_scale(b->velocity, delta_time);
-    b->position = vec2_add(b->position, dx);
+
+    b->alpha = b->torque * b->inv_inertia;
+    b->omega += b->alpha * delta_time;
 
     body_clear_force(b);
+    body_clear_torque(b);
 }
 
-void body_integrate_angle(Body *b, float delta_time)
+void body_integrate_velocities(Body *b, float delta_time)
 {
     if (b->inv_mass == 0)
         return;
 
-    b->alpha = b->torque * b->inv_inertia;
-    b->omega += b->alpha * delta_time;
+    vec2 dx = vec2_scale(b->velocity, delta_time);
+    b->position = vec2_add(b->position, dx);
+
     b->theta += b->omega * delta_time;
+    // b->theta = (b->theta + 2.0 * M_PI);
+    // b->theta = fmodf(b->theta, 2.0 * M_PI);
 
-    b->theta = (b->theta + 2.0 * M_PI);
-    b->theta = fmodf(b->theta, 2.0 * M_PI);
-
-    body_clear_torque(b);
+    shape_update_vertices(b->theta, b->position, b->shape_type, b->shape);
 }
 
 void body_add_force(Body *b, vec2 force)
@@ -125,32 +145,30 @@ void body_clear_torque(Body *b)
     b->torque = 0.0f;
 }
 
-void body_apply_impulse(Body *b, vec2 j)
+void body_apply_impulse_linear(Body *b, vec2 j)
 {
     if (b->inv_mass == 0)
         return;
-    
-    b->velocity = vec2_add(b->velocity, vec2_scale(j, b->inv_mass));
+
+    vec2 dv = vec2_scale(j, b->inv_mass);
+    b->velocity = vec2_add(b->velocity, dv);
+}
+
+void body_apply_impulse_angular(Body *b, float j)
+{
+    if (b->inv_mass == 0)
+        return;
+
+    b->omega += j * b->inv_inertia;
 }
 
 void body_apply_impulse_at_r(Body *b, vec2 j, vec2 r)
 {
     if (b->inv_mass == 0)
         return;
-    
+
     b->velocity = vec2_add(b->velocity, vec2_scale(j, b->inv_mass));
     b->omega += vec2_cross(r, j) * b->inv_inertia;
-}
-
-void body_update(Body *b, float delta_time)
-{
-    body_integrate_position(b, delta_time);
-    body_integrate_angle(b, delta_time);
-
-    if (b->shape_type == BOX || b->shape_type == POLYGON)
-    {
-        polygon_update_vertices(b->theta, b->position, (Polygon*)(b->shape));
-    }
 }
 
 #endif

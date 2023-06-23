@@ -156,8 +156,12 @@ void collision_info_resolve_penetration(Collision_Info *info)
     float da = info->depth / (info->a->inv_mass + info->b->inv_mass) * info->a->inv_mass;
     float db = info->depth / (info->a->inv_mass + info->b->inv_mass) * info->b->inv_mass;
 
-    info->a->position = vec2_sub(info->a->position, vec2_scale(info->normal, da));
-    info->b->position = vec2_add(info->b->position, vec2_scale(info->normal, db));
+    float corr = 1.0;
+    info->a->position = vec2_sub(info->a->position, vec2_scale(info->normal, da * corr));
+    info->b->position = vec2_add(info->b->position, vec2_scale(info->normal, db * corr));
+
+    shape_update_vertices(info->a->theta, info->a->position, info->a->shape_type, info->a->shape);
+    shape_update_vertices(info->b->theta, info->b->position, info->b->shape_type, info->b->shape);
 }
 
 bool collision_polygon_circle(Body *a, Body *b, Collision_Info *info)
