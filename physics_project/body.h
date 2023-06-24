@@ -73,7 +73,7 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
     b.restitution = 1.0;
     b.friction = 0.0;
 
-    shape_update_vertices(b.theta, b.position, b.shape_type, &b.shape);
+    shape_update_vertices(b.theta, b.position, b.shape_type, b.shape);
 
     return b;
 }

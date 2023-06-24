@@ -120,8 +120,6 @@ void joint_constraint_post_solve(JointConstraint *c)
 
 void joint_constraint_solve(JointConstraint *c)
 {
-
-
     VecN v = constraint_velocities(c->a, c->b);
     MatMN invM = constraint_get_inv_m(c->a, c->b);
 

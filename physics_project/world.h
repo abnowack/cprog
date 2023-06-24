@@ -42,6 +42,7 @@ void world_create(World *w, float gravity)
 void world_add_body(World *w, Body *b)
 {
     w->b[w->n_bodies] = *b;
+    shape_update_vertices(w->b[w->n_bodies].theta, w->b[w->n_bodies].position, w->b[w->n_bodies].shape_type, w->b[w->n_bodies].shape);
     w->n_bodies++;
 }
 
@@ -91,7 +92,7 @@ void world_update(World *w, float delta_time)
         joint_constraint_pre_solve(w->joint_constraints[i], delta_time);
     }
 
-    for (unsigned int iter = 0; iter < 5; iter++)
+    for (unsigned int iter = 0; iter < 10; iter++)
     {
         for (unsigned int i = 0; i < w->n_joint_constraints; i++)
         {

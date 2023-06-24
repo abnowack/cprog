@@ -37,66 +37,90 @@ void app_setup(int window_width, int window_height)
     app.mouse_button_down = false;
     app.new_shape_type = CIRCLE;
 
-    Circle *c = (Circle *)malloc(sizeof(Circle));
-    Body b;
 
-    *c = circle_create(30.0);
-    b = body_create(CIRCLE, c, gfx.window_width / 2, gfx.window_height / 2, 0.0);
-    world_add_body(&app.world, &b);
+    Circle *c1 = (Circle *)malloc(sizeof(Circle));
+    Body *body1 = (Body *)malloc(sizeof(Body));
+    *c1 = circle_create(30.0);
+    *body1 = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    world_add_body(&app.world, body1);
 
-    *c = circle_create(20.0);
-    b = body_create(CIRCLE, c, app.world.b[0].position.x - 100, app.world.b[0].position.y, 1.0);
-    world_add_body(&app.world, &b);
-
-    *c = circle_create(20.0);
-    b = body_create(CIRCLE, c, app.world.b[1].position.x - 100, app.world.b[1].position.y, 1.0);
-    world_add_body(&app.world, &b);
-
-    *c = circle_create(20.0);
-    b = body_create(CIRCLE, c, app.world.b[2].position.x - 100, app.world.b[2].position.y, 1.0);
-    world_add_body(&app.world, &b);
+    Polygon *box = (Polygon *)malloc(sizeof(Polygon));
+    Body *boxb = (Body *)malloc(sizeof(Body));
+    *box = box_create(800, 50);
+    *boxb = body_create(BOX, box, app.world.b[0].position.x, app.world.b[0].position.y + 200, 1.0);
+    boxb->friction = 0.5;
+    boxb->restitution = 0.5;
+    world_add_body(&app.world, boxb);
 
     JointConstraint *jc = (JointConstraint*)malloc(sizeof(JointConstraint));
     joint_constraint_create(jc, &app.world.b[0], &app.world.b[1], app.world.b[0].position);
     world_add_joint_constraints(&app.world, jc);
 
-    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
-    joint_constraint_create(jc, &app.world.b[1], &app.world.b[2], app.world.b[1].position);
-    world_add_joint_constraints(&app.world, jc);
+    Circle *c2 = (Circle *)malloc(sizeof(Circle));
+    Body *body3 = (Body *)malloc(sizeof(Body));
+    *c2 = circle_create(20.0);
+    *body3 = body_create(CIRCLE, c2, app.world.b[1].position.x, app.world.b[1].position.y + 150, 1.0);
+    world_add_body(&app.world, body3);
 
-    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
-    joint_constraint_create(jc, &app.world.b[2], &app.world.b[3], app.world.b[2].position);
-    world_add_joint_constraints(&app.world, jc);
+    JointConstraint *jc2 = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc2, &app.world.b[1], &app.world.b[2], app.world.b[1].position);
+    world_add_joint_constraints(&app.world, jc2);
 
-    // Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
-    // *floor = box_create(gfx.window_width - 50, 25);
-    // Body b = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
-    // b.restitution = 0.2;
-    // world_add_body(&app.world, &b);
+    Circle *c3 = (Circle *)malloc(sizeof(Circle));
+    Body *body4 = (Body *)malloc(sizeof(Body));
+    *c3 = circle_create(20.0);
+    *body4 = body_create(CIRCLE, c3, app.world.b[2].position.x, app.world.b[2].position.y + 150, 1.0);
+    world_add_body(&app.world, body4);
 
-    // Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
-    // *left_wall = box_create(25, gfx.window_height - 50);
-    // b = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
-    // b.restitution = 0.2;
-    // world_add_body(&app.world, &b);
+    JointConstraint *jc3 = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc3, &app.world.b[2], &app.world.b[3], app.world.b[2].position);
+    world_add_joint_constraints(&app.world, jc3);
 
-    // Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
-    // *right_wall = box_create(25, gfx.window_height - 50);
-    // b = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
-    // b.restitution = 0.2;
-    // world_add_body(&app.world, &b);
+    // Circle *c4 = (Circle *)malloc(sizeof(Circle));
+    // Body *body5 = (Body *)malloc(sizeof(Body));
+    // *c4 = circle_create(20.0);
+    // *body5 = body_create(CIRCLE, c4, app.world.b[3].position.x, app.world.b[3].position.y + 70, 1.0);
+    // world_add_body(&app.world, body5);
 
-    // Polygon *b2 = (Polygon *)malloc(sizeof(Polygon));
-    // *b2 = box_create(150, 150);
-    // b = body_create(BOX, b2, gfx.window_width / 2.0, gfx.window_height / 2.0, 0.0);
-    // b.theta = M_PI / 6;
-    // b.restitution = 0.5;
-    // b.omega = 1.0;
-    // world_add_body(&app.world, &b);
+    // JointConstraint *jc4 = (JointConstraint*)malloc(sizeof(JointConstraint));
+    // joint_constraint_create(jc4, &app.world.b[3], &app.world.b[4], app.world.b[3].position);
+    // world_add_joint_constraints(&app.world, jc4);
+
+    // *c = circle_create(20.0);
+    // body = body_create(CIRCLE, c, app.world.b[4].position.x, app.world.b[4].position.y + 70, 1.0);
+    // world_add_body(&app.world, &body);
+
+    // JointConstraint *jc5 = (JointConstraint*)malloc(sizeof(JointConstraint));
+    // joint_constraint_create(jc5, &app.world.b[4], &app.world.b[5], app.world.b[4].position);
+    // world_add_joint_constraints(&app.world, jc5);
+
+    Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
+    Body *body_floor = (Body *)malloc(sizeof(Body));
+    *floor = box_create(gfx.window_width - 50, 25);
+    *body_floor = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
+    body_floor->restitution = 0.2;
+    body_floor->friction = 0.5;
+    world_add_body(&app.world, body_floor);
+
+    Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
+    Body *body_left_wall = (Body *)malloc(sizeof(Body));
+    *left_wall = box_create(25, gfx.window_height - 50);
+    *body_left_wall = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
+    body_left_wall->restitution = 0.2;
+    body_left_wall->friction = 0.5;
+    world_add_body(&app.world, body_left_wall);
+
+    Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
+    Body *body_right_wall = (Body *)malloc(sizeof(Body));
+    *right_wall = box_create(25, gfx.window_height - 50);
+    *body_right_wall = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
+    body_right_wall->restitution = 0.2;
+    world_add_body(&app.world, body_right_wall);
 }
 
 void app_input()
 {
+    
     SDL_Event event;
     Body b;
     while (SDL_PollEvent(&event))
@@ -204,6 +228,7 @@ void app_update()
     time_previous_frame = SDL_GetTicks();
 
     world_update(&app.world, delta_time);
+
 }
 
 void app_render()
@@ -247,6 +272,7 @@ void app_render()
     }
 
     gfx_render_frame();
+
 }
 
 void app_destroy()
