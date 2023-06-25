@@ -12,7 +12,8 @@
 
 #define PIXELS_PER_METER 50
 
-typedef struct {
+typedef struct
+{
     float G;
 
     Body b[MAX_BODIES];
@@ -24,11 +25,9 @@ typedef struct {
     float torques[MAX_TORQUES];
     unsigned int n_torques;
 
-    JointConstraint* joint_constraints[MAX_CONSTRAINTS];
+    JointConstraint *joint_constraints[MAX_CONSTRAINTS];
     unsigned int n_joint_constraints;
 } World;
-
-void world_check_collisions(World *w);
 
 void world_create(World *w, float gravity)
 {
@@ -66,6 +65,9 @@ void world_add_joint_constraints(World *w, JointConstraint *jc)
 
 void world_update(World *w, float delta_time)
 {
+    PenetrationConstraint pc_list[MAX_CONSTRAINTS];
+    unsigned int n_penetration_constraints = 0;
+
     for (unsigned int i = 0; i < w->n_bodies; i++)
     {
         vec2 weight = (vec2){0.0, w->b[i].mass * w->G * PIXELS_PER_METER};
@@ -87,9 +89,37 @@ void world_update(World *w, float delta_time)
         body_integrate_forces(&w->b[i], delta_time);
     }
 
+    // collision detection
+    for (unsigned int i = 0; i < w->n_bodies; i++)
+    {
+        for (unsigned int j = i + 1; j < w->n_bodies; j++)
+        {
+            Body *a = &(w->b[i]);
+            Body *b = &(w->b[j]);
+            Collision_Info info[10];
+            unsigned int n_collisions = 0;
+
+            if (collision(a, b, info, &n_collisions))
+            {
+                for (unsigned int coll_iter = 0; coll_iter < n_collisions; coll_iter++)
+                {
+                    gfx_draw_filled_circle(info[coll_iter].start.x, info[coll_iter].start.y, 5, (uint8_t[3]){255, 0, 0});
+
+                    penetration_constraint_create(&pc_list[n_penetration_constraints], info[coll_iter].a, info[coll_iter].b, info[coll_iter].start, info[coll_iter].end, info[coll_iter].normal);
+                    n_penetration_constraints++;
+                }
+            }
+        }
+    }
+
     for (unsigned int i = 0; i < w->n_joint_constraints; i++)
     {
         joint_constraint_pre_solve(w->joint_constraints[i], delta_time);
+    }
+
+    for (unsigned int i = 0; i < n_penetration_constraints; i++)
+    {
+        penetration_constraint_pre_solve(&pc_list[i], delta_time);
     }
 
     for (unsigned int iter = 0; iter < 10; iter++)
@@ -98,6 +128,11 @@ void world_update(World *w, float delta_time)
         {
             joint_constraint_solve(w->joint_constraints[i]);
         }
+
+        for (unsigned int i = 0; i < n_penetration_constraints; i++)
+        {
+            penetration_constraint_solve(&pc_list[i]);
+        }
     }
 
     for (unsigned int i = 0; i < w->n_joint_constraints; i++)
@@ -105,47 +140,14 @@ void world_update(World *w, float delta_time)
         joint_constraint_post_solve(w->joint_constraints[i]);
     }
 
+    for (unsigned int i = 0; i < n_penetration_constraints; i++)
+    {
+        penetration_constraint_post_solve(&pc_list[i]);
+    }
+
     for (unsigned int i = 0; i < w->n_bodies; i++)
     {
         body_integrate_velocities(&w->b[i], delta_time);
-    }
-
-    world_check_collisions(w);
-}
-
-void world_check_collisions(World *w)
-{
-    // collision detection
-    for (unsigned int i = 0; i < w->n_bodies; i++)
-    {
-        for (unsigned int j = i + 1; j < w->n_bodies; j++)
-        {
-            Body *a = &(w->b[i]);
-            Body *b = &(w->b[j]);
-            a->is_colliding = false;
-            b->is_colliding = false;
-
-            Collision_Info info;
-
-            if (collision(a, b, &info))
-            {
-                a->is_colliding = true;
-                b->is_colliding = true;
-
-                collision_info_resolve_collision(&info);
-
-                // if (app.debug)
-                // {
-                //     gfx_draw_filled_circle(info.start.x, info.start.y, 3, (uint8_t[3]){255, 0, 0});
-                //     gfx_draw_filled_circle(info.end.x, info.end.y, 3, (uint8_t[3]){255, 0, 0});
-
-                //     vec2 dir = vec2_unitvector(vec2_sub(info.end, info.start));
-                //     vec2 end = vec2_add(info.start, vec2_scale(dir, 20.0));
-
-                //     gfx_draw_line(info.start.x, info.start.y, end.x, end.y, (uint8_t[3]){255, 0, 0});
-                // }
-            }
-        }
     }
 }
 

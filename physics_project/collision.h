@@ -19,27 +19,27 @@ typedef struct
     float depth;
 } Collision_Info;
 
-bool collision_circle_circle(Body *, Body *, Collision_Info *);
-bool collision_polygon_polygon(Body *, Body *, Collision_Info *);
-bool collision_polygon_circle(Body *, Body *, Collision_Info *);
+bool collision_circle_circle(Body *, Body *, Collision_Info[], unsigned int *);
+bool collision_polygon_polygon(Body *, Body *, Collision_Info[], unsigned int *);
+bool collision_polygon_circle(Body *, Body *, Collision_Info[], unsigned int *);
 
-bool collision(Body *a, Body *b, Collision_Info *info)
+bool collision(Body *a, Body *b, Collision_Info info[], unsigned int *n_collisions)
 {
     if (a->shape_type == CIRCLE && b->shape_type == CIRCLE)
     {
-        return collision_circle_circle(a, b, info);
+        return collision_circle_circle(a, b, info, n_collisions);
     }
     else if ((a->shape_type == POLYGON || a->shape_type == BOX) && (b->shape_type == POLYGON || b->shape_type == BOX))
     {
-        return collision_polygon_polygon(a, b, info);
+        return collision_polygon_polygon(a, b, info, n_collisions);
     }
     else if ((a->shape_type == POLYGON || a->shape_type == BOX) && b->shape_type == CIRCLE)
     {
-        return collision_polygon_circle(a, b, info);
+        return collision_polygon_circle(a, b, info, n_collisions);
     }
     else if (a->shape_type == CIRCLE && (b->shape_type == POLYGON || b->shape_type == BOX))
     {
-        return collision_polygon_circle(b, a, info);
+        return collision_polygon_circle(b, a, info, n_collisions);
     }
     else
     {
@@ -47,8 +47,10 @@ bool collision(Body *a, Body *b, Collision_Info *info)
     }
 }
 
-bool collision_circle_circle(Body *a, Body *b, Collision_Info *info)
+bool collision_circle_circle(Body *a, Body *b, Collision_Info info[], unsigned int *n_collisions)
 {
+    Collision_Info *contact = &info[*n_collisions];
+
     Circle *c_a = (Circle *)a->shape;
     Circle *c_b = (Circle *)b->shape;
 
@@ -56,19 +58,20 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info *info)
 
     if (distance <= (c_a->radius + c_b->radius))
     {
-        info->a = a;
-        info->b = b;
+        contact->a = a;
+        contact->b = b;
 
-        info->normal = vec2_unitvector(vec2_sub(b->position, a->position));
+        contact->normal = vec2_unitvector(vec2_sub(b->position, a->position));
 
-        vec2 v1 = vec2_scale(info->normal, c_b->radius);
-        info->start = vec2_sub(b->position, v1);
+        vec2 v1 = vec2_scale(contact->normal, c_b->radius);
+        contact->start = vec2_sub(b->position, v1);
 
-        vec2 foo = vec2_scale(info->normal, c_a->radius);
-        info->end = vec2_add(a->position, foo);
+        vec2 foo = vec2_scale(contact->normal, c_a->radius);
+        contact->end = vec2_add(a->position, foo);
 
-        info->depth = vec2_norm(vec2_sub(info->end, info->start));
+        contact->depth = vec2_norm(vec2_sub(contact->end, contact->start));
 
+        (*n_collisions)++;
         return true;
     }
     else
@@ -77,7 +80,7 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info *info)
     }
 }
 
-float collision_find_minimum_separation(Polygon *a, Polygon *b, vec2 *axis, vec2 *point)
+float collision_find_minimum_separation(Polygon *a, Polygon *b, unsigned int *index_reference_edge, vec2 *support_point)
 {
     float separation = -FLT_MAX;
 
@@ -104,19 +107,66 @@ float collision_find_minimum_separation(Polygon *a, Polygon *b, vec2 *axis, vec2
         if (min_separation > separation)
         {
             separation = min_separation;
-            *axis = polygon_edge_at(a, i);
-            *point = min_vertex;
+            *index_reference_edge = i;
+            *support_point = min_vertex;
         }
     }
     return separation;
 }
 
-bool collision_polygon_polygon(Body *a, Body *b, Collision_Info *info)
+unsigned int polygon_find_incident_edge(Polygon *shape, vec2 normal)
 {
-    vec2 a_axis, b_axis;
-    vec2 a_point, b_point;
-    float sep_ab = collision_find_minimum_separation((Polygon *)a->shape, (Polygon *)b->shape, &a_axis, &a_point);
-    float sep_ba = collision_find_minimum_separation((Polygon *)b->shape, (Polygon *)a->shape, &b_axis, &b_point);
+    unsigned int incident_edge;
+    float min_projection = FLT_MAX;
+    for (unsigned int i = 0; i < shape->n_vertices; ++i)
+    {
+        vec2 edge_normal = vec2_normal(polygon_edge_at(shape, i));
+        float projection = vec2_dot(edge_normal, normal);
+        if (projection < min_projection)
+        {
+            min_projection = projection;
+            incident_edge = i;
+        }
+    }
+    return incident_edge;
+}
+
+int polygon_clip_segment_to_line(Polygon *shape, vec2 contacts_in[2], vec2 contacts_out[2], vec2 *c0, vec2 *c1)
+{
+    unsigned int num_out = 0;
+
+    vec2 normal = vec2_unitvector(vec2_sub(*c1, *c0));
+    float dist0 = vec2_cross(vec2_sub(contacts_in[0], *c0), normal);
+    float dist1 = vec2_cross(vec2_sub(contacts_in[1], *c0), normal);
+
+    if (dist0 <= 0)
+    {
+        contacts_out[num_out++] = contacts_in[0];
+    }
+    if (dist1 <= 0)
+    {
+        contacts_out[num_out++] = contacts_in[1];
+    }
+
+    if (dist0 * dist1 < 0)
+    {
+        float total_dist = dist0 - dist1;
+
+        float t = dist0 / total_dist;
+        vec2 contact = vec2_add(contacts_in[0], vec2_scale(vec2_sub(contacts_in[1], contacts_in[0]), t));
+        contacts_out[num_out] = contact;
+        num_out++;
+    }
+    return num_out;
+}
+
+bool collision_polygon_polygon(Body *a, Body *b, Collision_Info info[], unsigned int *n_collisions)
+{
+
+    unsigned int a_index_reference_edge, b_index_reference_edge;
+    vec2 a_support_point, b_support_point;
+    float sep_ab = collision_find_minimum_separation((Polygon *)a->shape, (Polygon *)b->shape, &a_index_reference_edge, &a_support_point);
+    float sep_ba = collision_find_minimum_separation((Polygon *)b->shape, (Polygon *)a->shape, &b_index_reference_edge, &b_support_point);
 
     if (sep_ab >= 0)
     {
@@ -127,45 +177,84 @@ bool collision_polygon_polygon(Body *a, Body *b, Collision_Info *info)
         return false;
     }
 
-    info->a = a;
-    info->b = b;
-
+    Polygon *reference_shape;
+    Polygon *incident_shape;
+    unsigned int index_reference_edge;
     if (sep_ab > sep_ba)
     {
-        info->depth = -sep_ab;
-        info->normal = vec2_normal(a_axis);
-        info->start = a_point;
-        info->end = vec2_add(a_point, vec2_scale(info->normal, info->depth));
+        reference_shape = (Polygon *)a->shape;
+        incident_shape = (Polygon *)b->shape;
+        index_reference_edge = a_index_reference_edge;
     }
     else
     {
-        info->depth = -sep_ba;
-        info->normal = vec2_scale(vec2_normal(b_axis), -1);
-        info->start = vec2_sub(b_point, vec2_scale(info->normal, info->depth));
-        info->end = b_point;
+        reference_shape = (Polygon *)b->shape;
+        incident_shape = (Polygon *)a->shape;
+        index_reference_edge = b_index_reference_edge;
+    }
+
+    vec2 reference_edge = polygon_edge_at(reference_shape, index_reference_edge);
+
+    unsigned int incident_index = polygon_find_incident_edge(incident_shape, vec2_normal(reference_edge));
+    unsigned int incident_next_index = (incident_index + 1) % (incident_shape->n_vertices);
+    vec2 v0 = incident_shape->global_vertices[incident_index];
+    vec2 v1 = incident_shape->global_vertices[incident_next_index];
+
+    vec2 contact_points[2] = {v0, v1};
+    vec2 clipped_points[2] = {v0, v1};
+
+    for (unsigned int i = 0; i < reference_shape->n_vertices; i++)
+    {
+        if (i == index_reference_edge)
+            continue;
+
+        vec2 c0 = reference_shape->global_vertices[i];
+        vec2 c1 = reference_shape->global_vertices[(i + 1) % reference_shape->n_vertices];
+
+        int num_clipped = polygon_clip_segment_to_line(reference_shape, contact_points, clipped_points, &c0, &c1);
+        if (num_clipped < 2)
+        {
+            break;
+        }
+
+        contact_points[0] = clipped_points[0];
+        contact_points[1] = clipped_points[1];
+    }
+
+    vec2 *vref = &reference_shape->global_vertices[index_reference_edge];
+
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        vec2 vclip = clipped_points[i];
+        float separation = vec2_dot(vec2_sub(vclip, *vref), vec2_normal(reference_edge));
+        if (separation <= 0)
+        {
+            Collision_Info *contact = &info[*n_collisions];
+            contact->a = a;
+            contact->b = b;
+            contact->normal = vec2_normal(reference_edge);
+            contact->start = vclip;
+            contact->end = vec2_add(vclip, vec2_scale(contact->normal, -1.0 * separation));
+            if (sep_ba >= sep_ab)
+            {
+                vec2 temp_start = contact->start;
+                vec2 temp_end = contact->end;
+                contact->start = temp_end;
+                contact->end = temp_start;
+                contact->normal = vec2_scale(contact->normal, -1.0);
+            }
+
+            (*n_collisions)++;
+        }
     }
 
     return true;
 }
 
-void collision_info_resolve_penetration(Collision_Info *info)
+bool collision_polygon_circle(Body *a, Body *b, Collision_Info info[], unsigned int *n_collisions)
 {
-    if (info->a->inv_mass == 0 && info->b->inv_mass == 0)
-        return;
+    Collision_Info *contact = &info[*n_collisions];
 
-    float da = info->depth / (info->a->inv_mass + info->b->inv_mass) * info->a->inv_mass;
-    float db = info->depth / (info->a->inv_mass + info->b->inv_mass) * info->b->inv_mass;
-
-    float corr = 1.0;
-    info->a->position = vec2_sub(info->a->position, vec2_scale(info->normal, da * corr));
-    info->b->position = vec2_add(info->b->position, vec2_scale(info->normal, db * corr));
-
-    shape_update_vertices(info->a->theta, info->a->position, info->a->shape_type, info->a->shape);
-    shape_update_vertices(info->b->theta, info->b->position, info->b->shape_type, info->b->shape);
-}
-
-bool collision_polygon_circle(Body *a, Body *b, Collision_Info *info)
-{
     Polygon *p = (Polygon *)a->shape;
     Circle *c = (Circle *)b->shape;
 
@@ -215,12 +304,12 @@ bool collision_polygon_circle(Body *a, Body *b, Collision_Info *info)
             }
             else
             {
-                info->a = a;
-                info->b = b;
-                info->depth = c->radius - vec2_norm(v1);
-                info->normal = vec2_unitvector(v1);
-                info->start = vec2_add(b->position, vec2_scale(info->normal, -1.0 * c->radius));
-                info->end = vec2_add(info->start, vec2_scale(info->normal, info->depth));
+                contact->a = a;
+                contact->b = b;
+                contact->depth = c->radius - vec2_norm(v1);
+                contact->normal = vec2_unitvector(v1);
+                contact->start = vec2_add(b->position, vec2_scale(contact->normal, -1.0 * c->radius));
+                contact->end = vec2_add(contact->start, vec2_scale(contact->normal, contact->depth));
             }
         }
         else
@@ -235,12 +324,12 @@ bool collision_polygon_circle(Body *a, Body *b, Collision_Info *info)
                 }
                 else
                 {
-                    info->a = a;
-                    info->b = b;
-                    info->depth = c->radius - vec2_norm(v1);
-                    info->normal = vec2_unitvector(v1);
-                    info->start = vec2_add(b->position, vec2_scale(info->normal, -1.0 * c->radius));
-                    info->end = vec2_add(info->start, vec2_scale(info->normal, info->depth));
+                    contact->a = a;
+                    contact->b = b;
+                    contact->depth = c->radius - vec2_norm(v1);
+                    contact->normal = vec2_unitvector(v1);
+                    contact->start = vec2_add(b->position, vec2_scale(contact->normal, -1.0 * c->radius));
+                    contact->end = vec2_add(contact->start, vec2_scale(contact->normal, contact->depth));
                 }
             }
             else
@@ -251,66 +340,29 @@ bool collision_polygon_circle(Body *a, Body *b, Collision_Info *info)
                 }
                 else
                 {
-                    info->a = a;
-                    info->b = b;
-                    info->depth = c->radius - distance_circle_edge;
-                    info->normal = vec2_normal(vec2_sub(min_next_vertex, min_current_vertex));
-                    info->start = vec2_add(b->position, vec2_scale(info->normal, -1.0 * c->radius));
-                    info->end = vec2_add(info->start, vec2_scale(info->normal, info->depth));
+                    contact->a = a;
+                    contact->b = b;
+                    contact->depth = c->radius - distance_circle_edge;
+                    contact->normal = vec2_normal(vec2_sub(min_next_vertex, min_current_vertex));
+                    contact->start = vec2_add(b->position, vec2_scale(contact->normal, -1.0 * c->radius));
+                    contact->end = vec2_add(contact->start, vec2_scale(contact->normal, contact->depth));
                 }
             }
         }
     }
     else
     {
-        info->a = a;
-        info->b = b;
-        info->depth = c->radius - distance_circle_edge;
-        info->normal = vec2_normal(vec2_sub(min_next_vertex, min_current_vertex));
-        info->start = vec2_add(b->position, vec2_scale(info->normal, -1.0 * c->radius));
-        info->end = vec2_add(info->start, vec2_scale(info->normal, info->depth));
+        contact->a = a;
+        contact->b = b;
+        contact->depth = c->radius - distance_circle_edge;
+        contact->normal = vec2_normal(vec2_sub(min_next_vertex, min_current_vertex));
+        contact->start = vec2_add(b->position, vec2_scale(contact->normal, -1.0 * c->radius));
+        contact->end = vec2_add(contact->start, vec2_scale(contact->normal, contact->depth));
     }
 
+    (*n_collisions)++;
+
     return true;
-}
-
-void collision_info_resolve_collision(Collision_Info *info)
-{
-    collision_info_resolve_penetration(info);
-
-    float e = info->a->restitution;
-    if (info->b->restitution < info->a->restitution)
-        e = info->b->restitution;
-
-    float f = info->a->friction;
-    if (info->b->friction < info->a->friction)
-        e = info->b->friction;
-
-    // vec2 v_rel = vec2_sub(info->a->velocity, info->b->velocity);
-    vec2 ra = vec2_sub(info->end, info->a->position);
-    vec2 rb = vec2_sub(info->start, info->b->position);
-    vec2 va = vec2_add(info->a->velocity, (vec2){-1.0 * info->a->omega * ra.y, info->a->omega * ra.x});
-    vec2 vb = vec2_add(info->b->velocity, (vec2){-1.0 * info->b->omega * rb.y, info->b->omega * rb.x});
-    vec2 v_rel = vec2_sub(va, vb);
-
-    float v_rel_dot_normal = vec2_dot(v_rel, info->normal);
-    vec2 impulse_N_direction = info->normal;
-    float impulse_N_magnitude = -(1.0 + e) * v_rel_dot_normal;
-    impulse_N_magnitude /= ((info->a->inv_mass + info->b->inv_mass) + vec2_cross(ra, info->normal) * vec2_cross(ra, info->normal) * info->a->inv_inertia + vec2_cross(rb, info->normal) * vec2_cross(rb, info->normal) * info->b->inv_inertia);
-
-    vec2 tangent = vec2_normal(info->normal);
-    float v_rel_dot_tangent = vec2_dot(v_rel, tangent);
-    vec2 impulse_T_direction = tangent;
-    float impulse_T_magnitude = f * -(1.0 + e) * v_rel_dot_tangent;
-    impulse_T_magnitude /= ((info->a->inv_mass + info->b->inv_mass) + vec2_cross(ra, tangent) * vec2_cross(ra, tangent) * info->a->inv_inertia + vec2_cross(rb, tangent) * vec2_cross(rb, tangent) * info->b->inv_inertia);
-
-    vec2 j_N = vec2_scale(impulse_N_direction, impulse_N_magnitude);
-    vec2 j_T = vec2_scale(impulse_T_direction, impulse_T_magnitude);
-
-    vec2 j_total = vec2_add(j_N, j_T);
-
-    body_apply_impulse_at_r(info->a, j_total, ra);
-    body_apply_impulse_at_r(info->b, vec2_scale(j_total, -1.0), rb);
 }
 
 #endif

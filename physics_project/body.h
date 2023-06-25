@@ -25,7 +25,6 @@ typedef struct
     ShapeType shape_type;
     void *shape;
 
-    bool is_colliding;
     float restitution;
     float friction;
 } Body;
@@ -69,7 +68,6 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
     }
     b.torque = 0.0;
 
-    b.is_colliding = false;
     b.restitution = 1.0;
     b.friction = 0.0;
 

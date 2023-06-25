@@ -161,7 +161,7 @@ void app_input()
                     if (app.new_shape_type == CIRCLE)
                     {
                         Circle *c = (Circle *)malloc(sizeof(Circle));
-                        *c = circle_create(40.0);
+                        *c = circle_create(100.0);
                         b = body_create(CIRCLE, c, x, y, 1.0);
                         b.restitution = 0.3;
                         b.friction = 0.4;
@@ -170,7 +170,7 @@ void app_input()
                     else if (app.new_shape_type == BOX)
                     {
                         Polygon *p = (Polygon *)malloc(sizeof(Polygon));
-                        *p = box_create(50, 50);
+                        *p = box_create(100, 100);
                         b = body_create(BOX, p, x, y, 1.0);
                         b.restitution = 0.3;
                         b.friction = 0.4;
@@ -242,12 +242,12 @@ void app_render()
     {
         uint8_t draw_color[3] = {not_collide_color[0], not_collide_color[1], not_collide_color[2]};
 
-        if (app.world.b[i].is_colliding && app.debug)
-        {
-            draw_color[0] = collide_color[0];
-            draw_color[1] = collide_color[1];
-            draw_color[2] = collide_color[2];
-        }
+        // if (app.world.b[i].is_colliding && app.debug)
+        // {
+        //     draw_color[0] = collide_color[0];
+        //     draw_color[1] = collide_color[1];
+        //     draw_color[2] = collide_color[2];
+        // }
 
         if (app.world.b[i].shape_type == CIRCLE)
         {
@@ -262,6 +262,8 @@ void app_render()
         else
         {
         }
+
+        
     }
 
     for (unsigned int i = 0; i < app.world.n_joint_constraints; i++)
