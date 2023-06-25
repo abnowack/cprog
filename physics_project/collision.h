@@ -2,20 +2,20 @@
 #define COLLISION_H
 
 #include <stdbool.h>
-#include "body.h"
-#include "vec2.h"
-
 #include <stdio.h>
 #include <float.h>
+
+#include "body.h"
+#include "vec2.h"
 
 typedef struct
 {
     Body *a;
     Body *b;
 
-    vec2 start;
-    vec2 end;
-    vec2 normal;
+    Vec2 start;
+    Vec2 end;
+    Vec2 normal;
     float depth;
 } Collision_Info;
 
@@ -63,10 +63,10 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info info[], unsigned i
 
         contact->normal = vec2_unitvector(vec2_sub(b->position, a->position));
 
-        vec2 v1 = vec2_scale(contact->normal, c_b->radius);
+        Vec2 v1 = vec2_scale(contact->normal, c_b->radius);
         contact->start = vec2_sub(b->position, v1);
 
-        vec2 foo = vec2_scale(contact->normal, c_a->radius);
+        Vec2 foo = vec2_scale(contact->normal, c_a->radius);
         contact->end = vec2_add(a->position, foo);
 
         contact->depth = vec2_norm(vec2_sub(contact->end, contact->start));
@@ -80,21 +80,21 @@ bool collision_circle_circle(Body *a, Body *b, Collision_Info info[], unsigned i
     }
 }
 
-float collision_find_minimum_separation(Polygon *a, Polygon *b, unsigned int *index_reference_edge, vec2 *support_point)
+float collision_find_minimum_separation(Polygon *a, Polygon *b, unsigned int *index_reference_edge, Vec2 *support_point)
 {
     float separation = -FLT_MAX;
 
     for (unsigned int i = 0; i < a->n_vertices; i++)
     {
-        vec2 va = a->global_vertices[i];
-        vec2 normal = vec2_normal(polygon_edge_at(a, i));
+        Vec2 va = a->global_vertices[i];
+        Vec2 normal = vec2_normal(polygon_edge_at(a, i));
 
         float min_separation = FLT_MAX;
-        vec2 min_vertex;
+        Vec2 min_vertex;
 
         for (int j = 0; j < b->n_vertices; j++)
         {
-            vec2 vb = b->global_vertices[j];
+            Vec2 vb = b->global_vertices[j];
 
             float projection = vec2_dot(vec2_sub(vb, va), normal);
 
@@ -114,13 +114,13 @@ float collision_find_minimum_separation(Polygon *a, Polygon *b, unsigned int *in
     return separation;
 }
 
-unsigned int polygon_find_incident_edge(Polygon *shape, vec2 normal)
+unsigned int polygon_find_incident_edge(Polygon *shape, Vec2 normal)
 {
     unsigned int incident_edge;
     float min_projection = FLT_MAX;
     for (unsigned int i = 0; i < shape->n_vertices; ++i)
     {
-        vec2 edge_normal = vec2_normal(polygon_edge_at(shape, i));
+        Vec2 edge_normal = vec2_normal(polygon_edge_at(shape, i));
         float projection = vec2_dot(edge_normal, normal);
         if (projection < min_projection)
         {
@@ -131,11 +131,11 @@ unsigned int polygon_find_incident_edge(Polygon *shape, vec2 normal)
     return incident_edge;
 }
 
-int polygon_clip_segment_to_line(Polygon *shape, vec2 contacts_in[2], vec2 contacts_out[2], vec2 *c0, vec2 *c1)
+int polygon_clip_segment_to_line(Polygon *shape, Vec2 contacts_in[2], Vec2 contacts_out[2], Vec2 *c0, Vec2 *c1)
 {
     unsigned int num_out = 0;
 
-    vec2 normal = vec2_unitvector(vec2_sub(*c1, *c0));
+    Vec2 normal = vec2_unitvector(vec2_sub(*c1, *c0));
     float dist0 = vec2_cross(vec2_sub(contacts_in[0], *c0), normal);
     float dist1 = vec2_cross(vec2_sub(contacts_in[1], *c0), normal);
 
@@ -153,7 +153,7 @@ int polygon_clip_segment_to_line(Polygon *shape, vec2 contacts_in[2], vec2 conta
         float total_dist = dist0 - dist1;
 
         float t = dist0 / total_dist;
-        vec2 contact = vec2_add(contacts_in[0], vec2_scale(vec2_sub(contacts_in[1], contacts_in[0]), t));
+        Vec2 contact = vec2_add(contacts_in[0], vec2_scale(vec2_sub(contacts_in[1], contacts_in[0]), t));
         contacts_out[num_out] = contact;
         num_out++;
     }
@@ -164,7 +164,7 @@ bool collision_polygon_polygon(Body *a, Body *b, Collision_Info info[], unsigned
 {
 
     unsigned int a_index_reference_edge, b_index_reference_edge;
-    vec2 a_support_point, b_support_point;
+    Vec2 a_support_point, b_support_point;
     float sep_ab = collision_find_minimum_separation((Polygon *)a->shape, (Polygon *)b->shape, &a_index_reference_edge, &a_support_point);
     float sep_ba = collision_find_minimum_separation((Polygon *)b->shape, (Polygon *)a->shape, &b_index_reference_edge, &b_support_point);
 
@@ -193,23 +193,23 @@ bool collision_polygon_polygon(Body *a, Body *b, Collision_Info info[], unsigned
         index_reference_edge = b_index_reference_edge;
     }
 
-    vec2 reference_edge = polygon_edge_at(reference_shape, index_reference_edge);
+    Vec2 reference_edge = polygon_edge_at(reference_shape, index_reference_edge);
 
     unsigned int incident_index = polygon_find_incident_edge(incident_shape, vec2_normal(reference_edge));
     unsigned int incident_next_index = (incident_index + 1) % (incident_shape->n_vertices);
-    vec2 v0 = incident_shape->global_vertices[incident_index];
-    vec2 v1 = incident_shape->global_vertices[incident_next_index];
+    Vec2 v0 = incident_shape->global_vertices[incident_index];
+    Vec2 v1 = incident_shape->global_vertices[incident_next_index];
 
-    vec2 contact_points[2] = {v0, v1};
-    vec2 clipped_points[2] = {v0, v1};
+    Vec2 contact_points[2] = {v0, v1};
+    Vec2 clipped_points[2] = {v0, v1};
 
     for (unsigned int i = 0; i < reference_shape->n_vertices; i++)
     {
         if (i == index_reference_edge)
             continue;
 
-        vec2 c0 = reference_shape->global_vertices[i];
-        vec2 c1 = reference_shape->global_vertices[(i + 1) % reference_shape->n_vertices];
+        Vec2 c0 = reference_shape->global_vertices[i];
+        Vec2 c1 = reference_shape->global_vertices[(i + 1) % reference_shape->n_vertices];
 
         int num_clipped = polygon_clip_segment_to_line(reference_shape, contact_points, clipped_points, &c0, &c1);
         if (num_clipped < 2)
@@ -221,11 +221,11 @@ bool collision_polygon_polygon(Body *a, Body *b, Collision_Info info[], unsigned
         contact_points[1] = clipped_points[1];
     }
 
-    vec2 *vref = &reference_shape->global_vertices[index_reference_edge];
+    Vec2 *vref = &reference_shape->global_vertices[index_reference_edge];
 
     for (unsigned int i = 0; i < 2; i++)
     {
-        vec2 vclip = clipped_points[i];
+        Vec2 vclip = clipped_points[i];
         float separation = vec2_dot(vec2_sub(vclip, *vref), vec2_normal(reference_edge));
         if (separation <= 0)
         {
@@ -237,8 +237,8 @@ bool collision_polygon_polygon(Body *a, Body *b, Collision_Info info[], unsigned
             contact->end = vec2_add(vclip, vec2_scale(contact->normal, -1.0 * separation));
             if (sep_ba >= sep_ab)
             {
-                vec2 temp_start = contact->start;
-                vec2 temp_end = contact->end;
+                Vec2 temp_start = contact->start;
+                Vec2 temp_end = contact->end;
                 contact->start = temp_end;
                 contact->end = temp_start;
                 contact->normal = vec2_scale(contact->normal, -1.0);
@@ -259,17 +259,17 @@ bool collision_polygon_circle(Body *a, Body *b, Collision_Info info[], unsigned 
     Circle *c = (Circle *)b->shape;
 
     bool is_outside = false;
-    vec2 min_current_vertex;
-    vec2 min_next_vertex;
+    Vec2 min_current_vertex;
+    Vec2 min_next_vertex;
     float distance_circle_edge = FLT_MIN;
 
     for (int i = 0; i < p->n_vertices; i++)
     {
         int i_next = (i + 1) % p->n_vertices;
-        vec2 edge = polygon_edge_at(p, i);
-        vec2 normal = vec2_normal(edge);
+        Vec2 edge = polygon_edge_at(p, i);
+        Vec2 normal = vec2_normal(edge);
 
-        vec2 circle_center = vec2_sub(b->position, p->global_vertices[i]);
+        Vec2 circle_center = vec2_sub(b->position, p->global_vertices[i]);
         float projection = vec2_dot(circle_center, normal);
 
         if (projection > 0)
@@ -293,8 +293,8 @@ bool collision_polygon_circle(Body *a, Body *b, Collision_Info info[], unsigned 
 
     if (is_outside)
     {
-        vec2 v1 = vec2_sub(b->position, min_current_vertex);
-        vec2 v2 = vec2_sub(min_next_vertex, min_current_vertex);
+        Vec2 v1 = vec2_sub(b->position, min_current_vertex);
+        Vec2 v2 = vec2_sub(min_next_vertex, min_current_vertex);
 
         if (vec2_dot(v1, v2) < 0)
         {

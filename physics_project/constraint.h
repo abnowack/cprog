@@ -3,8 +3,8 @@
 
 #include "body.h"
 #include "vec2.h"
-#include "vecN.h"
-#include "MatMN.h"
+#include "vecn.h"
+#include "matmn.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -34,8 +34,8 @@ typedef struct
 {
     Body *a;
     Body *b;
-    vec2 a_local_anchor;
-    vec2 b_local_anchor;
+    Vec2 a_local_anchor;
+    Vec2 b_local_anchor;
     MatMN jacobian;
     VecN cached_lambda;
     float bias;
@@ -45,28 +45,28 @@ typedef struct
 {
     Body *a;
     Body *b;
-    vec2 a_collision;
-    vec2 b_collision;
+    Vec2 a_collision;
+    Vec2 b_collision;
     MatMN jacobian;
     VecN cached_lambda;
     float bias;
-    vec2 normal;
+    Vec2 normal;
     float friction;
 } PenetrationConstraint;
 
 
-void joint_constraint_create(JointConstraint *jc, Body *a, Body *b, vec2 anchor)
+void joint_constraint_create(JointConstraint *jc, Body *a, Body *b, Vec2 anchor)
 {
     jc->a = a;
     jc->b = b;
     jc->a_local_anchor = body_global_to_local_space(a, anchor);
     jc->b_local_anchor = body_global_to_local_space(b, anchor);
     jc->jacobian = matmn_create(1, 6);
-    jc->cached_lambda = vecN_create(1);
+    jc->cached_lambda = vecn_create(1);
     jc->bias = 0;
 }
 
-void penetration_constraint_create(PenetrationConstraint *pc, Body *a, Body *b, vec2 a_collision, vec2 b_collision, vec2 normal)
+void penetration_constraint_create(PenetrationConstraint *pc, Body *a, Body *b, Vec2 a_collision, Vec2 b_collision, Vec2 normal)
 {
     pc->a = a;
     pc->b = b;
@@ -74,7 +74,7 @@ void penetration_constraint_create(PenetrationConstraint *pc, Body *a, Body *b, 
     pc->b_collision = body_global_to_local_space(b, b_collision);
     pc->normal = body_global_to_local_space(a, normal);
     pc->jacobian = matmn_create(2, 6);
-    pc->cached_lambda = vecN_create(2);
+    pc->cached_lambda = vecn_create(2);
     pc->bias = 0;
     pc->friction = 0.0;
 }
@@ -93,7 +93,7 @@ MatMN constraint_get_inv_m(Body *a, Body *b)
 
 VecN constraint_velocities(Body *a, Body *b)
 {
-    VecN v = vecN_create(6);
+    VecN v = vecn_create(6);
     v.data[0] = a->velocity.x;
     v.data[1] = a->velocity.y;
     v.data[2] = a->omega;
@@ -105,20 +105,20 @@ VecN constraint_velocities(Body *a, Body *b)
 
 void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
 {
-    vec2 pa = body_local_to_global_space(c->a, c->a_local_anchor);
-    vec2 pb = body_local_to_global_space(c->b, c->b_local_anchor);
+    Vec2 pa = body_local_to_global_space(c->a, c->a_local_anchor);
+    Vec2 pb = body_local_to_global_space(c->b, c->b_local_anchor);
 
-    vec2 j1 = vec2_scale(vec2_sub(pa, pb), 2.0);
+    Vec2 j1 = vec2_scale(vec2_sub(pa, pb), 2.0);
     MATMN_AT(c->jacobian, 0, 0) = j1.x;
     MATMN_AT(c->jacobian, 0, 1) = j1.y;
 
-    vec2 ra = vec2_sub(pa, c->a->position);
-    vec2 rb = vec2_sub(pb, c->b->position);
+    Vec2 ra = vec2_sub(pa, c->a->position);
+    Vec2 rb = vec2_sub(pb, c->b->position);
 
     float j2 = 2.0 * vec2_cross(ra, vec2_sub(pa, pb));
     MATMN_AT(c->jacobian, 0, 2) = j2;
 
-    vec2 j3 = vec2_scale(vec2_sub(pb, pa), 2.0);
+    Vec2 j3 = vec2_scale(vec2_sub(pb, pa), 2.0);
     MATMN_AT(c->jacobian, 0, 3) = j3.x;
     MATMN_AT(c->jacobian, 0, 4) = j3.y;
 
@@ -129,10 +129,10 @@ void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
 
     VecN impulses = matmn_vec_mul(&jacobian_T, &c->cached_lambda);
 
-    body_apply_impulse_linear(c->a, (vec2){impulses.data[0], impulses.data[1]});
+    body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
     body_apply_impulse_angular(c->a, impulses.data[2]);
 
-    body_apply_impulse_linear(c->b, (vec2){impulses.data[3], impulses.data[4]});
+    body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
     body_apply_impulse_angular(c->b, impulses.data[5]);
 
     float beta = 0.2;
@@ -155,38 +155,38 @@ void joint_constraint_solve(JointConstraint *c)
     MatMN aa_2 = matmn_mat_mul(&(c->jacobian), &invM);
     MatMN lhs = matmn_mat_mul(&aa_2, &jacobian_T);
     VecN aa_1 = matmn_vec_mul(&(c->jacobian), &v);
-    VecN rhs = vecN_scale(&aa_1, -1.0);
+    VecN rhs = vecn_scale(&aa_1, -1.0);
     rhs.data[0] -= c->bias;
 
     VecN lambda = matmn_solve_gauss_seidel(&lhs, &rhs);
-    c->cached_lambda = vecN_add(&c->cached_lambda, &lambda);
+    c->cached_lambda = vecn_add(&c->cached_lambda, &lambda);
 
     VecN impulses = matmn_vec_mul(&jacobian_T, &lambda);
 
-    body_apply_impulse_linear(c->a, (vec2){impulses.data[0], impulses.data[1]});
+    body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
     body_apply_impulse_angular(c->a, impulses.data[2]);
 
-    body_apply_impulse_linear(c->b, (vec2){impulses.data[3], impulses.data[4]});
+    body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
     body_apply_impulse_angular(c->b, impulses.data[5]);
 }
 
 void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time)
 {
-    vec2 pa = body_local_to_global_space(c->a, c->a_collision);
-    vec2 pb = body_local_to_global_space(c->b, c->b_collision);
-    vec2 n = body_local_to_global_space(c->a, c->normal);
+    Vec2 pa = body_local_to_global_space(c->a, c->a_collision);
+    Vec2 pb = body_local_to_global_space(c->b, c->b_collision);
+    Vec2 n = body_local_to_global_space(c->a, c->normal);
 
-    vec2 ra = vec2_sub(pa, c->a->position);
-    vec2 rb = vec2_sub(pb, c->b->position);
+    Vec2 ra = vec2_sub(pa, c->a->position);
+    Vec2 rb = vec2_sub(pb, c->b->position);
 
-    vec2 j1 = vec2_scale(n, -1.0);
+    Vec2 j1 = vec2_scale(n, -1.0);
     MATMN_AT(c->jacobian, 0, 0) = j1.x;
     MATMN_AT(c->jacobian, 0, 1) = j1.y;
 
     float j2 = vec2_cross(vec2_scale(ra, -1.0), n);
     MATMN_AT(c->jacobian, 0, 2) = j2;
 
-    vec2 j3 = n;
+    Vec2 j3 = n;
     MATMN_AT(c->jacobian, 0, 3) = j3.x;
     MATMN_AT(c->jacobian, 0, 4) = j3.y;
 
@@ -196,7 +196,7 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
     c->friction = MAX(c->a->friction, c->b->friction);
     if (c->friction > 0.0)
     {
-        vec2 t = vec2_normal(n);
+        Vec2 t = vec2_normal(n);
         MATMN_AT(c->jacobian, 1, 0) = -(t.x);
         MATMN_AT(c->jacobian, 1, 1) = -(t.y);
         MATMN_AT(c->jacobian, 1, 2) = -(vec2_cross(ra, t));
@@ -210,18 +210,18 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
 
     VecN impulses = matmn_vec_mul(&jacobian_T, &c->cached_lambda);
 
-    body_apply_impulse_linear(c->a, (vec2){impulses.data[0], impulses.data[1]});
+    body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
     body_apply_impulse_angular(c->a, impulses.data[2]);
 
-    body_apply_impulse_linear(c->b, (vec2){impulses.data[3], impulses.data[4]});
+    body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
     body_apply_impulse_angular(c->b, impulses.data[5]);
 
     float beta = 0.2;
     float C = vec2_dot(vec2_sub(pb, pa), vec2_scale(n, -1.0));
     C = MIN(0.0, C + 0.01f);
     
-    vec2 va = vec2_add(c->a->velocity, (vec2){-(c->a->omega) * ra.y, c->a->omega * ra.x});
-    vec2 vb = vec2_add(c->b->velocity, (vec2){-(c->b->omega) * rb.y, c->b->omega * rb.x});
+    Vec2 va = vec2_add(c->a->velocity, (Vec2){-(c->a->omega) * ra.y, c->a->omega * ra.x});
+    Vec2 vb = vec2_add(c->b->velocity, (Vec2){-(c->b->omega) * rb.y, c->b->omega * rb.x});
     float vrel_dot_normal = vec2_dot(vec2_sub(va, vb), n);
 
     float e = MIN(c->a->restitution, c->b->restitution);
@@ -242,13 +242,13 @@ void penetration_constraint_solve(PenetrationConstraint *c)
     MatMN aa_2 = matmn_mat_mul(&(c->jacobian), &invM);
     MatMN lhs = matmn_mat_mul(&aa_2, &jacobian_T);
     VecN aa_1 = matmn_vec_mul(&(c->jacobian), &v);
-    VecN rhs = vecN_scale(&aa_1, -1.0);
+    VecN rhs = vecn_scale(&aa_1, -1.0);
     rhs.data[0] -= c->bias;
 
     VecN lambda = matmn_solve_gauss_seidel(&lhs, &rhs);
 
-    VecN old_lambda = vecN_copy(&c->cached_lambda);
-    c->cached_lambda = vecN_add(&c->cached_lambda, &lambda);
+    VecN old_lambda = vecn_copy(&c->cached_lambda);
+    c->cached_lambda = vecn_add(&c->cached_lambda, &lambda);
     
     if (c->cached_lambda.data[0] < 0.0)
         c->cached_lambda.data[0] = 0.0;
@@ -266,14 +266,14 @@ void penetration_constraint_solve(PenetrationConstraint *c)
         }
     }
     
-    lambda = vecN_sub(&c->cached_lambda, &old_lambda);
+    lambda = vecn_sub(&c->cached_lambda, &old_lambda);
 
     VecN impulses = matmn_vec_mul(&jacobian_T, &lambda);
 
-    body_apply_impulse_linear(c->a, (vec2){impulses.data[0], impulses.data[1]});
+    body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
     body_apply_impulse_angular(c->a, impulses.data[2]);
 
-    body_apply_impulse_linear(c->b, (vec2){impulses.data[3], impulses.data[4]});
+    body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
     body_apply_impulse_angular(c->b, impulses.data[5]);
 }
 

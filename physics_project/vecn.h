@@ -10,7 +10,7 @@ typedef struct
     float *data;
 } VecN;
 
-VecN vecN_create(unsigned int n)
+VecN vecn_create(unsigned int n)
 {
     VecN a;
     a.n = n;
@@ -18,16 +18,16 @@ VecN vecN_create(unsigned int n)
     return a;
 }
 
-VecN vecN_destroy(VecN *a)
+VecN vecn_destroy(VecN *a)
 {
     a->n = 0;
     free(a->data);
     a->data = NULL;
 }
 
-VecN vecN_copy(VecN *a)
+VecN vecn_copy(VecN *a)
 {
-    VecN b = vecN_create(a->n);
+    VecN b = vecn_create(a->n);
     
     for (unsigned int i = 0; i < b.n; i++)
         b.data[i] = a->data[i];
@@ -35,11 +35,11 @@ VecN vecN_copy(VecN *a)
     return b;
 }
 
-VecN vecN_add(VecN *a, VecN *b)
+VecN vecn_add(VecN *a, VecN *b)
 {
     assert(a->n == b->n);
     
-    VecN c = vecN_create(a->n);
+    VecN c = vecn_create(a->n);
     
     for (unsigned int i = 0; i < a->n; i++)
         c.data[i] = a->data[i] + b->data[i];
@@ -47,11 +47,11 @@ VecN vecN_add(VecN *a, VecN *b)
     return c;
 }
 
-VecN vecN_sub(VecN *a, VecN *b)
+VecN vecn_sub(VecN *a, VecN *b)
 {
     assert(a->n == b->n);
     
-    VecN c = vecN_create(a->n);
+    VecN c = vecn_create(a->n);
     
     for (unsigned int i = 0; i < a->n; i++)
         c.data[i] = a->data[i] - b->data[i];
@@ -59,9 +59,9 @@ VecN vecN_sub(VecN *a, VecN *b)
     return c;
 }
 
-VecN vecN_scale(VecN *a, float b)
+VecN vecn_scale(VecN *a, float b)
 {
-    VecN c = vecN_create(a->n);
+    VecN c = vecn_create(a->n);
     
     for (unsigned int i = 0; i < a->n; i++)
         c.data[i] = a->data[i] * b;
@@ -69,7 +69,7 @@ VecN vecN_scale(VecN *a, float b)
     return c;
 }
 
-float vecN_dot(VecN *a, VecN *b)
+float vecn_dot(VecN *a, VecN *b)
 {
     assert(a->n == b->n);
 
@@ -80,7 +80,7 @@ float vecN_dot(VecN *a, VecN *b)
     return sum;
 }
 
-float vecN_at(VecN *a, unsigned int i)
+float vecn_at(VecN *a, unsigned int i)
 {
     assert(i < a->n);
     return a->data[i];

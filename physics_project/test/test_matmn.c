@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "../MatMN.h"
-#include "../vecN.h"
+#include "../matmn.h"
+#include "../vecn.h"
 
 void matmn_print(MatMN *a)
 {
@@ -53,7 +53,7 @@ int main(void)
     matmn_print(&d);
     printf("\n");
 
-    VecN v1 = vecN_create(4);
+    VecN v1 = vecn_create(4);
     v1.data[0] = 2;
     v1.data[1] = 3;
     v1.data[2] = 4;

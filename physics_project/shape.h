@@ -19,8 +19,8 @@ typedef struct
 
 typedef struct
 {
-    vec2 local_vertices[MAX_VERTICES];
-    vec2 global_vertices[MAX_VERTICES];
+    Vec2 local_vertices[MAX_VERTICES];
+    Vec2 global_vertices[MAX_VERTICES];
     unsigned int n_vertices;
 } Polygon;
 
@@ -36,19 +36,19 @@ Polygon box_create(float width, float height)
     Polygon b;
 
     b.n_vertices = 4;
-    b.local_vertices[0] = (vec2){-width / 2.0, -height / 2.0};
-    b.local_vertices[1] = (vec2){width / 2.0, -height / 2.0};
-    b.local_vertices[2] = (vec2){width / 2.0, height / 2.0};
-    b.local_vertices[3] = (vec2){-width / 2.0, height / 2.0};
-    b.global_vertices[0] = (vec2){-width / 2.0, -height / 2.0};
-    b.global_vertices[1] = (vec2){width / 2.0, -height / 2.0};
-    b.global_vertices[2] = (vec2){width / 2.0, height / 2.0};
-    b.global_vertices[3] = (vec2){-width / 2.0, height / 2.0};
+    b.local_vertices[0] = (Vec2){-width / 2.0, -height / 2.0};
+    b.local_vertices[1] = (Vec2){width / 2.0, -height / 2.0};
+    b.local_vertices[2] = (Vec2){width / 2.0, height / 2.0};
+    b.local_vertices[3] = (Vec2){-width / 2.0, height / 2.0};
+    b.global_vertices[0] = (Vec2){-width / 2.0, -height / 2.0};
+    b.global_vertices[1] = (Vec2){width / 2.0, -height / 2.0};
+    b.global_vertices[2] = (Vec2){width / 2.0, height / 2.0};
+    b.global_vertices[3] = (Vec2){-width / 2.0, height / 2.0};
 
     return b;
 }
 
-Polygon polygon_create(vec2 *vertices, unsigned int n_vertices)
+Polygon polygon_create(Vec2 *vertices, unsigned int n_vertices)
 {
     Polygon p;
     p.n_vertices = n_vertices;
@@ -60,7 +60,7 @@ Polygon polygon_create(vec2 *vertices, unsigned int n_vertices)
     return p;
 }
 
-void shape_update_vertices(float theta, vec2 position, ShapeType shape_type, void *shape)
+void shape_update_vertices(float theta, Vec2 position, ShapeType shape_type, void *shape)
 {
     if (shape_type == CIRCLE)
         return;
@@ -98,7 +98,7 @@ float shape_moment_of_inertia(ShapeType shape_type, void *shape)
     return inertia;
 }
 
-vec2 polygon_edge_at(Polygon *p, unsigned int index)
+Vec2 polygon_edge_at(Polygon *p, unsigned int index)
 {
     unsigned int next_index = (index + 1) % (p->n_vertices);
     return vec2_sub(p->global_vertices[next_index], p->global_vertices[index]);

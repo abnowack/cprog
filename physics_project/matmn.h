@@ -1,7 +1,7 @@
 #ifndef MATMN_H
 #define MATMN_H
 
-#include "vecN.h"
+#include "vecn.h"
 
 #define MATMN_AT(MAT, I, J) ((MAT).data[((MAT).n * I) + J])
 
@@ -48,7 +48,7 @@ MatMN matmn_transpose(MatMN *a)
 VecN matmn_vec_mul(MatMN *a, VecN *b)
 {
     assert(b->n == a->n);
-    VecN c = vecN_create(a->m);
+    VecN c = vecn_create(a->m);
 
     for (unsigned int i = 0; i < a->m; i++)
     {
@@ -95,7 +95,7 @@ MatMN matmn_scale(MatMN *a, float b)
 
 VecN matmn_solve_gauss_seidel(MatMN *a, VecN *b)
 {
-    VecN X = vecN_create(b->n);
+    VecN X = vecn_create(b->n);
 
     for (unsigned int iter = 0; iter < b->n; iter++)
     {

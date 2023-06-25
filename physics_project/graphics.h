@@ -7,15 +7,15 @@
 #include <SDL2/SDL2_gfxPrimitives.h>
 #include "vec2.h"
 
-struct Graphics
+typedef struct
 {
     int window_width;
     int window_height;
     SDL_Window *window;
     SDL_Renderer *renderer;
-};
+} Graphics;
 
-struct Graphics gfx = {0, 0, NULL, NULL};
+Graphics gfx = {0, 0, NULL, NULL};
 
 bool gfx_create_window(int window_width, int window_height)
 {
@@ -86,7 +86,7 @@ void gfx_draw_line(int x0, int y0, int x1, int y1, uint8_t color[3])
     lineColor(gfx.renderer, x0, y0, x1, y1, rgba);
 }
 
-void gfx_draw_polygon(int x, int y, vec2 *vertices, unsigned int n_vertices, uint8_t color[3])
+void gfx_draw_polygon(int x, int y, Vec2 *vertices, unsigned int n_vertices, uint8_t color[3])
 {
     uint32_t rgba = (255 << 24) + (color[2] << 16) + (color[1] << 8) + color[0];
     for (unsigned int i = 0; i < n_vertices; i++)
