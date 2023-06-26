@@ -1,14 +1,16 @@
 #ifndef MATMN_H
 #define MATMN_H
 
-#include "vecn.h"
+#include <stdlib.h>
+#include <assert.h>
 
-#define MATMN_AT(MAT, I, J) ((MAT).data[((MAT).n * I) + J])
+#define MATMN_AT(MAT, I, J) ((MAT).data[(((MAT).n) * ((MAT).s) * (I)) + (J)])
 
 typedef struct
 {
     unsigned int m; // rows
     unsigned int n; // cols
+    unsigned int s; // stride
     float *data;
 } MatMN;
 
@@ -17,85 +19,114 @@ MatMN matmn_create(unsigned int m, unsigned int n)
     MatMN a;
     a.m = m;
     a.n = n;
+    a.s = 1;
     a.data = (float *)calloc(m * n, sizeof(float));
 
     return a;
 }
 
-MatMN matmn_copy(MatMN *a)
+void matmn_destroy(MatMN *a)
 {
-    MatMN b = matmn_create(a->m, a->n);
+    free(a->data);
+}
+
+void matmn_copy(MatMN *a, MatMN *z)
+{
+    assert(a->m == z->m);
+    assert(a->n == z->n);
+
     for (unsigned int i = 0; i < (a->m * a->n); i++)
     {
-        b.data[i] = a->data[i];
+        z->data[i] = a->data[i];
     }
-    return b;
 }
 
-MatMN matmn_transpose(MatMN *a)
+MatMN matmn_create_zero_like(MatMN *a)
 {
-    MatMN b = matmn_create(a->n, a->m);
+    return matmn_create(a->m, a->n);
+}
+
+MatMN matmn_row(MatMN *a, unsigned int row)
+{
+    MatMN z;
+    z.m = 1;
+    z.n = a->n;
+    z.s = 1;
+    z.data = &MATMN_AT(*a, row, 0);
+    return z;
+}
+
+MatMN matmn_col(MatMN *a, unsigned int col)
+{
+    MatMN z;
+    z.m = a->m;
+    z.n = 1;
+    z.s = a->n;
+    z.data = &MATMN_AT(*a, 0, col);
+    return z;
+}
+
+void matmn_transpose(MatMN *a, MatMN *z)
+{
+    assert(a->m == z->n);
+    assert(a->n == z->m);
+    assert(a != z);
+
     for (unsigned int i = 0; i < a->m; i++)
     {
         for (unsigned int j = 0; j < a->n; j++)
         {
-            MATMN_AT(b, j, i) = MATMN_AT(*a, i, j);
+            MATMN_AT(*z, j, i) = MATMN_AT(*a, i, j);
         }
     }
-    return b;
 }
 
-VecN matmn_vec_mul(MatMN *a, VecN *b)
+void matmn_scale(MatMN *a, float b, MatMN *z)
 {
-    assert(b->n == a->n);
-    VecN c = vecn_create(a->m);
+    assert(a->m == z->m);
+    assert(a->n == z->n);
 
-    for (unsigned int i = 0; i < a->m; i++)
+    for (unsigned int i = 0; i < (a->m * a->n); i++)
     {
-        c.data[i] = 0;
-        for (unsigned int j = 0; j < a->n; j++)
-        {
-            c.data[i] += b->data[j] * MATMN_AT(*a, i, j);
-        }
+        z->data[i] = a->data[i] * b;
     }
-    return c;
 }
 
-MatMN matmn_mat_mul(MatMN *a, MatMN *b)
+void matmn_add(MatMN *a, MatMN *b, MatMN *z)
 {
-    // assert(a->n == b->m);
-    // assert(a->m == b->n);
+    assert(a->m == b->m);
+    assert(a->n == b->n);
 
-    if (b->m != a->n && b->n != a->m)
-        return matmn_copy(a);
+    assert(a->m == z->m);
+    assert(a->n == z->n);
 
-    MatMN c = matmn_create(a->m, b->n);
+    for (unsigned int i = 0; i < (a->m * a->n); i++)
+    {
+        z->data[i] = a->data[i] + b->data[i];
+    }
+}
+
+void matmn_mul(MatMN *a, MatMN *b, MatMN *z)
+{
+    assert(a->n == b->m);
+    assert(z->m == a->m);
+    assert(z->n == b->n);
 
     for (unsigned int i = 0; i < a->m; i++)
     {
         for (unsigned int j = 0; j < b->n; j++)
         {
-            MATMN_AT(c, i, j) = 0;
+            MATMN_AT(*z, i, j) = 0;
             for (unsigned int k = 0; k < a->n; k++)
-                MATMN_AT(c, i, j) += MATMN_AT(*a, i, k) * MATMN_AT(*b, k, j);
+                MATMN_AT(*z, i, j) += MATMN_AT(*a, i, k) * MATMN_AT(*b, k, j);
         }
     }
-    return c;
 }
 
-MatMN matmn_scale(MatMN *a, float b)
+void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *z)
 {
-    MatMN c = matmn_create(a->m, a->n);
-    for (unsigned int i = 0; i < (a->m * a->n); i++)
-    {
-        c.data[i] = a->data[i] * b;
-    }
-    return c;
-}
-
-VecN matmn_solve_gauss_seidel(MatMN *a, VecN *b)
-{
-    VecN X = vecn_create(b->n);
+    assert(b->m == 1);
+    assert(z->n == b->n);
 
     for (unsigned int iter = 0; iter < b->n; iter++)
     {
@@ -104,15 +135,14 @@ VecN matmn_solve_gauss_seidel(MatMN *a, VecN *b)
             float dot_prod = 0;
             for (unsigned int j = 0; j < b->n; j++)
             {
-                dot_prod += MATMN_AT(*a, i, j) * X.data[j];
+                dot_prod += MATMN_AT(*a, i, j) * MATMN_AT(*z, 0, j);
             }
-
-            float dx = (b->data[i] / MATMN_AT(*a, i, i)) - dot_prod / MATMN_AT(*a, i, i);
+            
+            float dx = (MATMN_AT(*b, 0, i) / MATMN_AT(*a, i, i)) - dot_prod / MATMN_AT(*a, i, i);
             if (dx == dx)
-                X.data[i] += dx;
+                MATMN_AT(*z, 0, i) += dx;
         }
     }
-    return X;
 }
 
 #endif

@@ -76,24 +76,23 @@ void world_update(World *w, float delta_time)
         next = n->next;
     }
 
-    for (unsigned int i = 0; i < n_penetration_constraints; i++)
-    {
-        penetration_constraint_pre_solve(&pc_list[i], delta_time);
-    }
+    // for (unsigned int i = 0; i < n_penetration_constraints; i++)
+    // {
+    //     penetration_constraint_pre_solve(&pc_list[i], delta_time);
+    // }
 
     for (unsigned int iter = 0; iter < 10; iter++)
     {
-        // for (unsigned int i = 0; i < w->n_joint_constraints; i++)
         for (Node *n = w->joint_constraints.start, *next; n; n = next)
         {
             joint_constraint_solve((JointConstraint *)n->data);
             next = n->next;
         }
 
-        for (unsigned int i = 0; i < n_penetration_constraints; i++)
-        {
-            penetration_constraint_solve(&pc_list[i]);
-        }
+        // for (unsigned int i = 0; i < n_penetration_constraints; i++)
+        // {
+        //     penetration_constraint_solve(&pc_list[i]);
+        // }
     }
 
     for (Node *n = w->joint_constraints.start, *next; n; n = next)
@@ -102,16 +101,21 @@ void world_update(World *w, float delta_time)
         next = n->next;
     }
 
-    for (unsigned int i = 0; i < n_penetration_constraints; i++)
-    {
-        penetration_constraint_post_solve(&pc_list[i]);
-    }
+    // for (unsigned int i = 0; i < n_penetration_constraints; i++)
+    // {
+    //     penetration_constraint_post_solve(&pc_list[i]);
+    // }
 
     for(Node *n = w->bodies.start, *next; n != NULL; n = next)
     {
         Body *b = (Body*)n->data;
         body_integrate_velocities(b, delta_time);
         next = n->next;
+    }
+
+    for (unsigned int i = 0; i < n_penetration_constraints; i++)
+    {
+        penetration_constraint_destroy(&pc_list[i]);
     }
 }
 

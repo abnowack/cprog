@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "../matmn.h"
-#include "../vecn.h"
 
 void matmn_print(MatMN *a)
 {
@@ -14,19 +13,9 @@ void matmn_print(MatMN *a)
     }
 }
 
-void vecn_print(VecN *a)
-{
-    for (unsigned int i = 0; i < a->n; i++)
-    {
-        printf("%.3f ", a->data[i]);
-    }
-    printf("\n");
-}
-
 int main(void)
 {
     MatMN a = matmn_create(3, 4);
-
     for (unsigned int i = 0; i < a.m; i++)
     {
         for (unsigned int j = 0; j < a.n; j++)
@@ -34,39 +23,43 @@ int main(void)
             MATMN_AT(a, i, j) = i + 0.1 * j;
         }
     }
-
     matmn_print(&a);
     printf("\n");
 
-    MatMN b = matmn_transpose(&a);
-
-    matmn_print(&b);
+    MatMN a_row = matmn_row(&a, 1);
+    matmn_print(&a_row);
     printf("\n");
 
-    MatMN c = matmn_copy(&a);
-
-    matmn_print(&c);
+    MatMN a_col = matmn_col(&a, 1);
+    matmn_print(&a_col);
     printf("\n");
 
-    MatMN d = matmn_scale(&a, -2.0);
-
-    matmn_print(&d);
+    MatMN a_T = matmn_create(a.n, a.m);
+    matmn_transpose(&a, &a_T);
+    matmn_print(&a_T);
     printf("\n");
+    matmn_destroy(&a_T);
 
-    VecN v1 = vecn_create(4);
-    v1.data[0] = 2;
-    v1.data[1] = 3;
-    v1.data[2] = 4;
-    v1.data[3] = 5;
-
-    VecN v2 = matmn_vec_mul(&a, &v1);
-
-    vecn_print(&v1);
-    vecn_print(&v2);
+    MatMN a_scale = matmn_create_zero_like(&a);
+    matmn_scale(&a, 2.0, &a_scale);
+    matmn_print(&a_scale);
     printf("\n");
+    matmn_destroy(&a_scale);
 
-    MatMN e = matmn_mat_mul(&a, &b);
-    matmn_print(&e);
+    MatMN b = matmn_create(4, 3);
+    for (unsigned int i = 0; i < b.m; i++)
+    {
+        for (unsigned int j = 0; j < b.n; j++)
+        {
+            MATMN_AT(b, i, j) = i + 0.1 * j;
+        }
+    }
+    MatMN a_mul_b = matmn_create(a.m, b.n);
+    matmn_mul(&a, &b, &a_mul_b);
+    matmn_print(&a_mul_b);
+    printf("\n");
+    matmn_destroy(&b);
+    matmn_destroy(&a_mul_b);
 
     return 0;
 }
