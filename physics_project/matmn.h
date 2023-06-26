@@ -106,6 +106,20 @@ void matmn_add(MatMN *a, MatMN *b, MatMN *z)
     }
 }
 
+void matmn_sub(MatMN *a, MatMN *b, MatMN *z)
+{
+    assert(a->m == b->m);
+    assert(a->n == b->n);
+
+    assert(a->m == z->m);
+    assert(a->n == z->n);
+
+    for (unsigned int i = 0; i < (a->m * a->n); i++)
+    {
+        z->data[i] = a->data[i] - b->data[i];
+    }
+}
+
 void matmn_mul(MatMN *a, MatMN *b, MatMN *z)
 {
     assert(a->n == b->m);
@@ -125,7 +139,7 @@ void matmn_mul(MatMN *a, MatMN *b, MatMN *z)
 
 void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *z)
 {
-    assert(b->m == 1);
+    assert(b->n == 1);
     assert(z->n == b->n);
 
     for (unsigned int iter = 0; iter < b->n; iter++)
@@ -135,12 +149,12 @@ void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *z)
             float dot_prod = 0;
             for (unsigned int j = 0; j < b->n; j++)
             {
-                dot_prod += MATMN_AT(*a, i, j) * MATMN_AT(*z, 0, j);
+                dot_prod += MATMN_AT(*a, i, j) * MATMN_AT(*z, j, 0);
             }
             
             float dx = (MATMN_AT(*b, 0, i) / MATMN_AT(*a, i, i)) - dot_prod / MATMN_AT(*a, i, i);
             if (dx == dx)
-                MATMN_AT(*z, 0, i) += dx;
+                MATMN_AT(*z, i, 0) += dx;
         }
     }
 }

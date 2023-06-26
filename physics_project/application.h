@@ -178,11 +178,6 @@ void app_input()
             if (app.mouse_button_down && event.button.button == SDL_BUTTON_LEFT)
             {
                 app.mouse_button_down = false;
-                // Vec2 diff = vec2_sub(app.p[app.n_Bodys - 1].position, app.mouse_cursor_pos);
-                // Vec2 impulse_dir = vec2_unitvector(diff);
-                // float impulse_magnitude = vec2_norm(diff) * 5.0;
-                // app.p[app.n_Bodys - 1].velocity = vec2_scale(impulse_dir, impulse_magnitude);
-                // app.p[app.n_Bodys - 1].frozen = false;
             }
             break;
         }

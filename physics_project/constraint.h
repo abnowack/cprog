@@ -4,22 +4,10 @@
 #include "body.h"
 #include "vec2.h"
 #include "matmn.h"
+#include "util.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-void matmn_print(MatMN *a)
-{
-    for (unsigned int i = 0; i < a->m; i++)
-    {
-        for (unsigned int j = 0; j < a->n; j++)
-        {
-            printf("%f ", MATMN_AT(*a, i, j));
-        }
-        printf("\n");
-    }
-}
-#include "matmn.h"
 
 typedef struct
 {
@@ -44,7 +32,6 @@ typedef struct
     Vec2 normal;
     float friction;
 } PenetrationConstraint;
-
 
 void joint_constraint_create(JointConstraint *jc, Body *a, Body *b, Vec2 anchor)
 {
@@ -71,7 +58,7 @@ void penetration_constraint_create(PenetrationConstraint *pc, Body *a, Body *b, 
     pc->b_collision = body_global_to_local_space(b, b_collision);
     pc->normal = body_global_to_local_space(a, normal);
     pc->jacobian = matmn_create(2, 6);
-    pc->cached_lambda = matmn_create(1, 2);
+    pc->cached_lambda = matmn_create(2, 1);
     pc->bias = 0;
     pc->friction = 0.0;
 }
@@ -178,7 +165,7 @@ void joint_constraint_solve(JointConstraint *c)
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
     MatMN lambda = matmn_create(1, 1);
-    printf("%d %d - %d %d - %d %d\n", lhs.m, lhs.n, rhs.m, rhs.n, lambda.m, lambda.n);
+    // printf("%d %d - %d %d - %d %d\n", lhs.m, lhs.n, rhs.m, rhs.n, lambda.m, lambda.n);
     matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
     matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
@@ -202,111 +189,141 @@ void joint_constraint_solve(JointConstraint *c)
     matmn_destroy(&jacobian_T);
 }
 
-// void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time)
-// {
-//     Vec2 pa = body_local_to_global_space(c->a, c->a_collision);
-//     Vec2 pb = body_local_to_global_space(c->b, c->b_collision);
-//     Vec2 n = body_local_to_global_space(c->a, c->normal);
+void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time)
+{
+    Vec2 pa = body_local_to_global_space(c->a, c->a_collision);
+    Vec2 pb = body_local_to_global_space(c->b, c->b_collision);
+    Vec2 n = body_local_to_global_space(c->a, c->normal);
 
-//     Vec2 ra = vec2_sub(pa, c->a->position);
-//     Vec2 rb = vec2_sub(pb, c->b->position);
+    Vec2 ra = vec2_sub(pa, c->a->position);
+    Vec2 rb = vec2_sub(pb, c->b->position);
 
-//     Vec2 j1 = vec2_scale(n, -1.0);
-//     MATMN_AT(c->jacobian, 0, 0) = j1.x;
-//     MATMN_AT(c->jacobian, 0, 1) = j1.y;
+    Vec2 j1 = vec2_scale(n, -1.0);
+    MATMN_AT(c->jacobian, 0, 0) = j1.x;
+    MATMN_AT(c->jacobian, 0, 1) = j1.y;
 
-//     float j2 = vec2_cross(vec2_scale(ra, -1.0), n);
-//     MATMN_AT(c->jacobian, 0, 2) = j2;
+    float j2 = vec2_cross(vec2_scale(ra, -1.0), n);
+    MATMN_AT(c->jacobian, 0, 2) = j2;
 
-//     Vec2 j3 = n;
-//     MATMN_AT(c->jacobian, 0, 3) = j3.x;
-//     MATMN_AT(c->jacobian, 0, 4) = j3.y;
+    Vec2 j3 = n;
+    MATMN_AT(c->jacobian, 0, 3) = j3.x;
+    MATMN_AT(c->jacobian, 0, 4) = j3.y;
 
-//     float j4 = vec2_cross(rb, n);
-//     MATMN_AT(c->jacobian, 0, 5) = j4;
+    float j4 = vec2_cross(rb, n);
+    MATMN_AT(c->jacobian, 0, 5) = j4;
 
-//     c->friction = MAX(c->a->friction, c->b->friction);
-//     if (c->friction > 0.0)
-//     {
-//         Vec2 t = vec2_normal(n);
-//         MATMN_AT(c->jacobian, 1, 0) = -(t.x);
-//         MATMN_AT(c->jacobian, 1, 1) = -(t.y);
-//         MATMN_AT(c->jacobian, 1, 2) = -(vec2_cross(ra, t));
+    c->friction = MAX(c->a->friction, c->b->friction);
+    if (c->friction > 0.0)
+    {
+        Vec2 t = vec2_normal(n);
+        MATMN_AT(c->jacobian, 1, 0) = -(t.x);
+        MATMN_AT(c->jacobian, 1, 1) = -(t.y);
+        MATMN_AT(c->jacobian, 1, 2) = -(vec2_cross(ra, t));
 
-//         MATMN_AT(c->jacobian, 1, 3) = t.x;
-//         MATMN_AT(c->jacobian, 1, 4) = t.y;
-//         MATMN_AT(c->jacobian, 1, 5) = vec2_cross(rb, t);
-//     }
+        MATMN_AT(c->jacobian, 1, 3) = t.x;
+        MATMN_AT(c->jacobian, 1, 4) = t.y;
+        MATMN_AT(c->jacobian, 1, 5) = vec2_cross(rb, t);
+    }
 
-//     MatMN jacobian_T = matmn_transpose(&(c->jacobian));
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    matmn_transpose(&(c->jacobian), &jacobian_T);
 
-//     VecN impulses = matmn_vec_mul(&jacobian_T, &c->cached_lambda);
+    MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n);
+    // printf("%d %d - %d %d - %d %d\n", jacobian_T.m, jacobian_T.n, c->cached_lambda.m, c->cached_lambda.n, impulses.m, impulses.n);
+    matmn_mul(&jacobian_T, &c->cached_lambda, &impulses);
 
-//     body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
-//     body_apply_impulse_angular(c->a, impulses.data[2]);
+    body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
+    body_apply_impulse_angular(c->a, MATMN_AT(impulses, 2, 0));
 
-//     body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
-//     body_apply_impulse_angular(c->b, impulses.data[5]);
+    body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
+    body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
 
-//     float beta = 0.2;
-//     float C = vec2_dot(vec2_sub(pb, pa), vec2_scale(n, -1.0));
-//     C = MIN(0.0, C + 0.01f);
-    
-//     Vec2 va = vec2_add(c->a->velocity, (Vec2){-(c->a->omega) * ra.y, c->a->omega * ra.x});
-//     Vec2 vb = vec2_add(c->b->velocity, (Vec2){-(c->b->omega) * rb.y, c->b->omega * rb.x});
-//     float vrel_dot_normal = vec2_dot(vec2_sub(va, vb), n);
+    float beta = 0.2;
+    float C = vec2_dot(vec2_sub(pb, pa), vec2_scale(n, -1.0));
+    C = MIN(0.0, C + 0.01f);
 
-//     float e = MIN(c->a->restitution, c->b->restitution);
-//     c->bias = beta / delta_time * C + (e * vrel_dot_normal);
-// }
+    Vec2 va = vec2_add(c->a->velocity, (Vec2){-(c->a->omega) * ra.y, c->a->omega * ra.x});
+    Vec2 vb = vec2_add(c->b->velocity, (Vec2){-(c->b->omega) * rb.y, c->b->omega * rb.x});
+    float vrel_dot_normal = vec2_dot(vec2_sub(va, vb), n);
 
-// void penetration_constraint_post_solve(PenetrationConstraint *c)
-// {
-// }
+    float e = MIN(c->a->restitution, c->b->restitution);
+    c->bias = beta / delta_time * C + (e * vrel_dot_normal);
 
-// void penetration_constraint_solve(PenetrationConstraint *c)
-// {
-//     VecN v = constraint_velocities(c->a, c->b);
-//     MatMN invM = constraint_get_inv_m(c->a, c->b);
+    matmn_destroy(&jacobian_T);
+    matmn_destroy(&impulses);
+}
 
-//     MatMN jacobian_T = matmn_transpose(&(c->jacobian));
+void penetration_constraint_post_solve(PenetrationConstraint *c)
+{
+}
 
-//     MatMN aa_2 = matmn_mat_mul(&(c->jacobian), &invM);
-//     MatMN lhs = matmn_mat_mul(&aa_2, &jacobian_T);
-//     VecN aa_1 = matmn_vec_mul(&(c->jacobian), &v);
-//     VecN rhs = vecn_scale(&aa_1, -1.0);
-//     rhs.data[0] -= c->bias;
+void penetration_constraint_solve(PenetrationConstraint *c)
+{
+    MatMN v = matmn_create(6, 1);
+    constraint_velocities(c->a, c->b, &v);
+    MatMN invM = matmn_create(6, 6);
+    constraint_get_inv_m(c->a, c->b, &invM);
 
-//     VecN lambda = matmn_solve_gauss_seidel(&lhs, &rhs);
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    matmn_transpose(&(c->jacobian), &jacobian_T);
 
-//     VecN old_lambda = vecn_copy(&c->cached_lambda);
-//     c->cached_lambda = vecn_add(&c->cached_lambda, &lambda);
-    
-//     if (c->cached_lambda.data[0] < 0.0)
-//         c->cached_lambda.data[0] = 0.0;
-    
-//     if (c->friction > 0)
-//     {
-//         float max_friction = c->cached_lambda.data[0] * c->friction;
-//         if (c->cached_lambda.data[1] < -max_friction)
-//         {
-//             c->cached_lambda.data[1] = -max_friction;
-//         } 
-//         else if (c->cached_lambda.data[1] > max_friction)
-//         {
-//             c->cached_lambda.data[1] = max_friction;
-//         }
-//     }
-    
-//     lambda = vecn_sub(&c->cached_lambda, &old_lambda);
+    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n);
+    matmn_mul(&c->jacobian, &invM, &aa_2);
+    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n);
+    matmn_mul(&aa_2, &jacobian_T, &lhs);
+    MatMN aa_1 = matmn_create(c->jacobian.m, v.n);
+    matmn_mul(&c->jacobian, &v, &aa_1);
+    MatMN rhs = matmn_create_zero_like(&aa_1);
+    matmn_scale(&aa_1, -1.0, &rhs);
+    MATMN_AT(rhs, 0, 0) -= c->bias;
 
-//     VecN impulses = matmn_vec_mul(&jacobian_T, &lambda);
+    MatMN lambda = matmn_create(2, 1);
+    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
 
-//     body_apply_impulse_linear(c->a, (Vec2){impulses.data[0], impulses.data[1]});
-//     body_apply_impulse_angular(c->a, impulses.data[2]);
+    MatMN old_lambda = matmn_create_zero_like(&c->cached_lambda);
+    matmn_copy(&c->cached_lambda, &old_lambda);
+    matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
-//     body_apply_impulse_linear(c->b, (Vec2){impulses.data[3], impulses.data[4]});
-//     body_apply_impulse_angular(c->b, impulses.data[5]);
-// }
+    if (c->cached_lambda.data[0] < 0.0)
+        c->cached_lambda.data[0] = 0.0;
+
+    if (c->friction > 0)
+    {
+        float max_friction = c->cached_lambda.data[0] * c->friction;
+        if (c->cached_lambda.data[1] < -max_friction)
+        {
+            c->cached_lambda.data[1] = -max_friction;
+        }
+        else if (c->cached_lambda.data[1] > max_friction)
+        {
+            c->cached_lambda.data[1] = max_friction;
+        }
+    }
+
+    matmn_sub(&c->cached_lambda, &old_lambda, &lambda);
+
+    MatMN impulses = matmn_create(jacobian_T.m, lambda.n);
+    matmn_mul(&jacobian_T, &lambda, &impulses);
+
+    body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
+    body_apply_impulse_angular(c->a, MATMN_AT(impulses, 2, 0));
+
+    body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
+    body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
+
+    matmn_print(&impulses);
+    printf("\n");
+
+    matmn_destroy(&impulses);
+    matmn_destroy(&old_lambda);
+    matmn_destroy(&lambda);
+    matmn_destroy(&rhs);
+    matmn_destroy(&aa_1);
+    matmn_destroy(&lhs);
+    matmn_destroy(&aa_2);
+    matmn_destroy(&jacobian_T);
+    matmn_destroy(&v);
+    matmn_destroy(&invM);
+}
 
 #endif

@@ -25,6 +25,16 @@ List list_create_empty()
     return l;
 }
 
+List list_destroy(List *list)
+{
+    for (Node *n = list->start, *next; n != NULL; n = next)
+    {
+        next = n->next;
+        free(n->data);
+        free(n);
+    }
+}
+
 unsigned int list_length(List *list)
 {
     Node *n = list->start;
