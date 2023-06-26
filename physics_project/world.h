@@ -4,10 +4,8 @@
 #include "body.h"
 #include "collision.h"
 #include "constraint.h"
+#include "linked_list.h"
 
-#define MAX_BODIES 40
-#define MAX_FORCES 20
-#define MAX_TORQUES 20
 #define MAX_CONSTRAINTS 100
 
 #define PIXELS_PER_METER 50
@@ -15,39 +13,15 @@
 typedef struct
 {
     float G;
-
-    Body b[MAX_BODIES];
-    unsigned int n_bodies;
-
-    Vec2 forces[MAX_FORCES];
-    unsigned int n_forces;
-
-    float torques[MAX_TORQUES];
-    unsigned int n_torques;
-
-    JointConstraint joint_constraints[MAX_CONSTRAINTS];
-    unsigned int n_joint_constraints;
+    List bodies;
+    List joint_constraints;
 } World;
 
 void world_create(World *w, float gravity)
 {
     w->G = -gravity;
-    w->n_bodies = 0;
-    w->n_forces = 0;
-    w->n_torques = 0;
-    w->n_joint_constraints = 0;
-}
-
-void world_add_force(World *w, Vec2 force)
-{
-    w->forces[w->n_forces] = force;
-    w->n_forces++;
-}
-
-void world_add_torque(World *w, float torque)
-{
-    w->torques[w->n_torques] = torque;
-    w->n_torques++;
+    w->bodies = list_create_empty();
+    w->joint_constraints = list_create_empty();
 }
 
 void world_update(World *w, float delta_time)
@@ -55,34 +29,28 @@ void world_update(World *w, float delta_time)
     PenetrationConstraint pc_list[MAX_CONSTRAINTS];
     unsigned int n_penetration_constraints = 0;
 
-    for (unsigned int i = 0; i < w->n_bodies; i++)
+    for(Node *n = w->bodies.start, *next; n != NULL; n = next)
     {
-        Vec2 weight = (Vec2){0.0, w->b[i].mass * w->G * PIXELS_PER_METER};
-        body_add_force(&w->b[i], weight);
-
-        for (unsigned int j = 0; j < w->n_forces; j++)
-        {
-            body_add_force(&w->b[i], w->forces[j]);
-        }
-
-        for (unsigned int j = 0; j < w->n_torques; j++)
-        {
-            body_add_torque(&w->b[i], w->torques[j]);
-        }
+        Body *b = (Body*)n->data;
+        Vec2 weight = (Vec2){0.0, b->mass * w->G * PIXELS_PER_METER};
+        body_add_force(b, weight);
+        next = n->next;
     }
 
-    for (unsigned int i = 0; i < w->n_bodies; i++)
+    for(Node *n = w->bodies.start, *next; n != NULL; n = next)
     {
-        body_integrate_forces(&w->b[i], delta_time);
+        Body *b = (Body*)n->data;
+        body_integrate_forces(b, delta_time);
+        next = n->next;
     }
 
     // collision detection
-    for (unsigned int i = 0; i < w->n_bodies; i++)
+    for(Node *n_i = w->bodies.start, *next_i; n_i != NULL; n_i = next_i)
     {
-        for (unsigned int j = i + 1; j < w->n_bodies; j++)
+        for(Node *n_j = n_i->next, *next_j; n_j != NULL; n_j = next_j)
         {
-            Body *a = &(w->b[i]);
-            Body *b = &(w->b[j]);
+            Body *a = (Body*)n_i->data;
+            Body *b = (Body*)n_j->data;
             Collision_Info info[10];
             unsigned int n_collisions = 0;
 
@@ -96,12 +64,16 @@ void world_update(World *w, float delta_time)
                     n_penetration_constraints++;
                 }
             }
+            next_j = n_j->next;
         }
+        next_i = n_i->next;
     }
 
-    for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+    // for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+    for (Node *n = w->joint_constraints.start, *next; n; n = next)
     {
-        joint_constraint_pre_solve(&(w->joint_constraints[i]), delta_time);
+        joint_constraint_pre_solve((JointConstraint *)n->data, delta_time);
+        next = n->next;
     }
 
     for (unsigned int i = 0; i < n_penetration_constraints; i++)
@@ -111,9 +83,11 @@ void world_update(World *w, float delta_time)
 
     for (unsigned int iter = 0; iter < 10; iter++)
     {
-        for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+        // for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+        for (Node *n = w->joint_constraints.start, *next; n; n = next)
         {
-            joint_constraint_solve(&(w->joint_constraints[i]));
+            joint_constraint_solve((JointConstraint *)n->data);
+            next = n->next;
         }
 
         for (unsigned int i = 0; i < n_penetration_constraints; i++)
@@ -122,9 +96,10 @@ void world_update(World *w, float delta_time)
         }
     }
 
-    for (unsigned int i = 0; i < w->n_joint_constraints; i++)
+    for (Node *n = w->joint_constraints.start, *next; n; n = next)
     {
-        joint_constraint_post_solve(&(w->joint_constraints[i]));
+        joint_constraint_post_solve((JointConstraint *)n->data);
+        next = n->next;
     }
 
     for (unsigned int i = 0; i < n_penetration_constraints; i++)
@@ -132,9 +107,11 @@ void world_update(World *w, float delta_time)
         penetration_constraint_post_solve(&pc_list[i]);
     }
 
-    for (unsigned int i = 0; i < w->n_bodies; i++)
+    for(Node *n = w->bodies.start, *next; n != NULL; n = next)
     {
-        body_integrate_velocities(&w->b[i], delta_time);
+        Body *b = (Body*)n->data;
+        body_integrate_velocities(b, delta_time);
+        next = n->next;
     }
 }
 

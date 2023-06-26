@@ -1,3 +1,5 @@
+# C Programming A Modern Approach by King
+
 C programs are structured with
  - Directives, commands for the preprocessor
     - Always begin with #
@@ -85,3 +87,9 @@ Organization Tips
   - Declaring a variable static in an object implementation file effectively makes it private, only accessible in that file itself
   - Hiding what a type contains, encapsulation, is done through incomplete types. This is done by having an interface use a pointer to the struct type, not the struct type itself. Usually as a typedef ie "typedef struct t *T" and everything will use "T" and "struct t" can be defined in the implementation file. For generic interfaces, use void. IE a stack of any type, the stored type in the stack struct will be void pointers.
 
+# C Interfaces and Implementations by David Hanson
+
+Interfaces
+  - Interface specifies the identifiers a client may use or access. Defined by header file.
+  - Abstract data types hide the details and specifications behind a typedef.
+    - Clients can't dereference typedefs which are pointers to opaque (abstract, hidden) types

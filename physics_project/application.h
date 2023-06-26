@@ -39,56 +39,68 @@ void app_setup(int window_width, int window_height)
 
     Circle *c1 = (Circle *)malloc(sizeof(Circle));
     *c1 = circle_create(30.0);
-    app.world.b[app.world.n_bodies++] = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    Body *b1 = (Body*)malloc(sizeof(Body));
+    *b1 = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    List_push(&app.world.bodies, b1);
 
     Polygon *box = (Polygon *)malloc(sizeof(Polygon));
     *box = box_create(800, 50);
-    app.world.b[app.world.n_bodies] = body_create(BOX, box, app.world.b[0].position.x, app.world.b[0].position.y + 200, 1.0);
-    app.world.b[app.world.n_bodies].friction = 0.5;
-    app.world.b[app.world.n_bodies].restitution = 0.5;
-    app.world.n_bodies++;
+    Body *b2 = (Body*)malloc(sizeof(Body));
+    *b2 = body_create(BOX, box, b1->position.x, b1->position.y + 200, 1.0);
+    b2->friction = 0.5;
+    b2->restitution = 0.5;
+    List_push(&app.world.bodies, b2);
 
-    joint_constraint_create(&app.world.joint_constraints[app.world.n_joint_constraints], &app.world.b[0], &app.world.b[1], app.world.b[0].position);
-    app.world.n_joint_constraints++;
+    JointConstraint *jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, b1, b2, b1->position);
+    List_push(&app.world.joint_constraints, jc);
 
     Circle *c2 = (Circle *)malloc(sizeof(Circle));
     *c2 = circle_create(20.0);
-    app.world.b[app.world.n_bodies++] = body_create(CIRCLE, c2, app.world.b[1].position.x, app.world.b[1].position.y + 150, 1.0);
+    Body *b3 = (Body*)malloc(sizeof(Body));
+    *b3 = body_create(CIRCLE, c2, b2->position.x, b2->position.y + 150, 1.0);
+    List_push(&app.world.bodies, b3);
 
-    joint_constraint_create(&app.world.joint_constraints[app.world.n_joint_constraints], &app.world.b[1], &app.world.b[2], app.world.b[1].position);
-    app.world.n_joint_constraints++;
+    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, b2, b3, b2->position);
+    List_push(&app.world.joint_constraints, jc);
 
     Circle *c3 = (Circle *)malloc(sizeof(Circle));
     *c3 = circle_create(20.0);
-    app.world.b[app.world.n_bodies++] = body_create(CIRCLE, c3, app.world.b[2].position.x, app.world.b[2].position.y + 150, 1.0);
+    Body *b4 = (Body*)malloc(sizeof(Body));
+    *b4 = body_create(CIRCLE, c3, b3->position.x, b3->position.y + 150, 1.0);
+    List_push(&app.world.bodies, b4);
 
-    joint_constraint_create(&app.world.joint_constraints[app.world.n_joint_constraints], &app.world.b[2], &app.world.b[3], app.world.b[2].position);
-    app.world.n_joint_constraints++;
+    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    joint_constraint_create(jc, b3, b4, b3->position);
+    List_push(&app.world.joint_constraints, jc);
 
     Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
     *floor = box_create(gfx.window_width - 50, 25);
-    app.world.b[app.world.n_bodies] = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
-    app.world.b[app.world.n_bodies].restitution = 0.2;
-    app.world.b[app.world.n_bodies].friction = 0.5;
-    app.world.n_bodies++;
+    Body *b5 = (Body*)malloc(sizeof(Body));
+    *b5 = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
+    b5->restitution = 0.2;
+    b5->friction = 0.5;
+    List_push(&app.world.bodies, b5);
 
     Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
     *left_wall = box_create(25, gfx.window_height - 50);
-    app.world.b[app.world.n_bodies] = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
-    app.world.b[app.world.n_bodies].restitution = 0.2;
-    app.world.b[app.world.n_bodies].friction = 0.5;
-    app.world.n_bodies++;
+    Body *b6 = (Body*)malloc(sizeof(Body));
+    *b6 = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
+    b6->restitution = 0.2;
+    b6->friction = 0.5;
+    List_push(&app.world.bodies, b6);
 
     Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
     *right_wall = box_create(25, gfx.window_height - 50);
-    app.world.b[app.world.n_bodies] = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
-    app.world.b[app.world.n_bodies].restitution = 0.2;
-    app.world.n_bodies++;
+    Body *b7 = (Body*)malloc(sizeof(Body));
+    *b7 = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
+    b7->restitution = 0.2;
+    List_push(&app.world.bodies, b7);
 }
 
 void app_input()
 {
-
     SDL_Event event;
     Body b;
     while (SDL_PollEvent(&event))
@@ -124,41 +136,41 @@ void app_input()
                 SDL_GetMouseState(&x, &y);
                 app.mouse_cursor_pos.x = x;
                 app.mouse_cursor_pos.y = y;
-                if (app.world.n_bodies < MAX_BODIES)
+                if (app.new_shape_type == CIRCLE)
                 {
-                    if (app.new_shape_type == CIRCLE)
-                    {
-                        Circle *c = (Circle *)malloc(sizeof(Circle));
-                        *c = circle_create(100.0);
-                        app.world.b[app.world.n_bodies] = body_create(CIRCLE, c, x, y, 1.0);
-                        app.world.b[app.world.n_bodies].restitution = 0.3;
-                        app.world.b[app.world.n_bodies].friction = 0.4;
-                        app.world.n_bodies++;
-                    }
-                    else if (app.new_shape_type == BOX)
-                    {
-                        Polygon *p = (Polygon *)malloc(sizeof(Polygon));
-                        *p = box_create(100, 100);
-                        app.world.b[app.world.n_bodies] = body_create(BOX, p, x, y, 1.0);
-                        app.world.b[app.world.n_bodies].restitution = 0.3;
-                        app.world.b[app.world.n_bodies].friction = 0.4;
-                        app.world.n_bodies++;
-                    }
-                    else if (app.new_shape_type == POLYGON)
-                    {
-                        Polygon *p = (Polygon *)malloc(sizeof(Polygon));
-                        Vec2 points[5];
-                        points[0] = (Vec2){20, 60};
-                        points[1] = (Vec2){-40, 20};
-                        points[2] = (Vec2){-20, -60};
-                        points[3] = (Vec2){20, -60};
-                        points[4] = (Vec2){40, 20};
-                        *p = polygon_create(points, 5);
-                        app.world.b[app.world.n_bodies] = body_create(POLYGON, p, x, y, 1.0);
-                        app.world.b[app.world.n_bodies].restitution = 0.1;
-                        app.world.b[app.world.n_bodies].friction = 0.7;
-                        app.world.n_bodies++;
-                    }
+                    Circle *c = (Circle *)malloc(sizeof(Circle));
+                    *c = circle_create(100.0);
+                    Body *b = (Body*)malloc(sizeof(Body));
+                    *b = body_create(CIRCLE, c, x, y, 1.0);
+                    b->restitution = 0.3;
+                    b->friction = 0.4;
+                    List_push(&app.world.bodies, b);
+                }
+                else if (app.new_shape_type == BOX)
+                {
+                    Polygon *p = (Polygon *)malloc(sizeof(Polygon));
+                    *p = box_create(100, 100);
+                    Body *b = (Body*)malloc(sizeof(Body));
+                    *b = body_create(BOX, p, x, y, 1.0);
+                    b->restitution = 0.3;
+                    b->friction = 0.4;
+                    List_push(&app.world.bodies, b);
+                }
+                else if (app.new_shape_type == POLYGON)
+                {
+                    Polygon *p = (Polygon *)malloc(sizeof(Polygon));
+                    Vec2 points[5];
+                    points[0] = (Vec2){20, 60};
+                    points[1] = (Vec2){-40, 20};
+                    points[2] = (Vec2){-20, -60};
+                    points[3] = (Vec2){20, -60};
+                    points[4] = (Vec2){40, 20};
+                    *p = polygon_create(points, 5);
+                    Body *b = (Body*)malloc(sizeof(Body));
+                    *b = body_create(POLYGON, p, x, y, 1.0);
+                    b->restitution = 0.1;
+                    b->friction = 0.7;
+                    List_push(&app.world.bodies, b);
                 }
             }
             break;
@@ -205,7 +217,7 @@ void app_render()
     uint8_t not_collide_color[3] = {0, 0, 255};
     uint8_t collide_color[3] = {255, 0, 0};
 
-    for (unsigned int i = 0; i < app.world.n_bodies; i++)
+    for (Node *n = app.world.bodies.start, *next; n; n = next)
     {
         uint8_t draw_color[3] = {not_collide_color[0], not_collide_color[1], not_collide_color[2]};
 
@@ -216,26 +228,31 @@ void app_render()
         //     draw_color[2] = collide_color[2];
         // }
 
-        if (app.world.b[i].shape_type == CIRCLE)
+        Body *b = (Body*)n->data;
+
+        if (b->shape_type == CIRCLE)
         {
-            Circle *c = (Circle *)(app.world.b[i].shape);
-            gfx_draw_circle(app.world.b[i].position.x, app.world.b[i].position.y, c->radius, app.world.b[i].theta, draw_color);
+            Circle *c = (Circle *)(b->shape);
+            gfx_draw_circle(b->position.x, b->position.y, c->radius, b->theta, draw_color);
         }
-        else if (app.world.b[i].shape_type == BOX || app.world.b[i].shape_type == POLYGON)
+        else if (b->shape_type == BOX || b->shape_type == POLYGON)
         {
-            Polygon *b = (Polygon *)(app.world.b[i].shape);
-            gfx_draw_polygon(app.world.b[i].position.x, app.world.b[i].position.y, b->global_vertices, b->n_vertices, draw_color);
+            Polygon *p = (Polygon *)(b->shape);
+            gfx_draw_polygon(b->position.x, b->position.y, p->global_vertices, p->n_vertices, draw_color);
         }
         else
         {
         }
+        next = n->next;
     }
 
-    for (unsigned int i = 0; i < app.world.n_joint_constraints; i++)
+    for(Node *n = app.world.joint_constraints.start, *next; n; n = next)
     {
-        Vec2 pa = body_local_to_global_space(app.world.joint_constraints[i].a, app.world.joint_constraints[i].a_local_anchor);
-        Vec2 pb = body_local_to_global_space(app.world.joint_constraints[i].b, app.world.joint_constraints[i].a_local_anchor);
+        JointConstraint *jc = (JointConstraint*)n->data;
+        Vec2 pa = body_local_to_global_space(jc->a, jc->a_local_anchor);
+        Vec2 pb = body_local_to_global_space(jc->b, jc->a_local_anchor);
         gfx_draw_line(pa.x, pa.y, pb.x, pb.y, collide_color);
+        next = n->next;
     }
 
     gfx_render_frame();
