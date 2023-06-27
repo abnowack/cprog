@@ -155,7 +155,7 @@ float matmn_dot_prod(MatMN *a, MatMN *b)
     return dot_prod;
 }
 
-void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *x)
+void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *x, unsigned int iterations)
 {
     assert(b->n == 1);
     assert(x->n == 1);
@@ -163,7 +163,7 @@ void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *x)
 
     matmn_set(0.0, x);
 
-    for (unsigned int iter = 0; iter < 10; iter++)
+    for (unsigned int iter = 0; iter < iterations; iter++)
     {
         for (unsigned int i = 0; i < b->m; i++)
         {

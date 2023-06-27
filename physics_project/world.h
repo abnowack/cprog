@@ -16,6 +16,12 @@ typedef struct
     float G;
     List bodies;
     List joint_constraints;
+
+    // constraint solving constants
+    float joint_beta;
+    float penetration_beta;
+    unsigned int constraint_iterations;
+    unsigned int gauss_seidel_iterations;
 } World;
 
 void world_create(World *w, float gravity)
@@ -23,13 +29,16 @@ void world_create(World *w, float gravity)
     w->G = -gravity;
     w->bodies = list_create_empty();
     w->joint_constraints = list_create_empty();
+
+    w->joint_beta = 0.5;
+    w->penetration_beta = 0.5;
+    w->constraint_iterations = 10;
+    w->gauss_seidel_iterations = 3;
 }
 
 void world_update(World *w, float delta_time)
 {
     List pc_list = list_create_empty();
-    // PenetrationConstraint pc_list[MAX_CONSTRAINTS];
-    // unsigned int n_penetration_constraints = 0;
 
     for (Node *n = w->bodies.start, *next; n != NULL; n = next)
     {
@@ -74,28 +83,27 @@ void world_update(World *w, float delta_time)
 
     for (Node *n = w->joint_constraints.start, *next; n; n = next)
     {
-        joint_constraint_pre_solve((JointConstraint *)n->data, delta_time);
+        joint_constraint_pre_solve((JointConstraint *)n->data, delta_time, w->joint_beta);
         next = n->next;
     }
 
-    // for (unsigned int i = 0; i < n_penetration_constraints; i++)
     for (Node *n = pc_list.start, *next; n; n = next)
     {
-        penetration_constraint_pre_solve((PenetrationConstraint *)n->data, delta_time);
+        penetration_constraint_pre_solve((PenetrationConstraint *)n->data, delta_time, w->penetration_beta);
         next = n->next;
     }
 
-    for (unsigned int iter = 0; iter < 10; iter++)
+    for (unsigned int iter = 0; iter < w->constraint_iterations; iter++)
     {
         for (Node *n = w->joint_constraints.start, *next; n; n = next)
         {
-            joint_constraint_solve((JointConstraint *)n->data);
+            joint_constraint_solve((JointConstraint *)n->data, w->gauss_seidel_iterations);
             next = n->next;
         }
 
         for (Node *n = pc_list.start, *next; n; n = next)
         {
-            penetration_constraint_solve((PenetrationConstraint *)n->data);
+            penetration_constraint_solve((PenetrationConstraint *)n->data, w->gauss_seidel_iterations);
             next = n->next;
         }
     }

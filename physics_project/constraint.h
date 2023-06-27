@@ -98,7 +98,7 @@ void constraint_velocities(Body *a, Body *b, MatMN *z)
     MATMN_AT(*z, 0, 5) = b->omega;
 }
 
-void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
+void joint_constraint_pre_solve(JointConstraint *c, float delta_time, float beta)
 {
     mem_reset_scratch_pool();
 
@@ -134,20 +134,16 @@ void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
 
-    float beta = 0.2;
     float C = vec2_dot(vec2_sub(pb, pa), vec2_sub(pb, pa));
     C = MAX(0.0, C - 0.01f);
     c->bias = beta / delta_time * C;
-
-    // matmn_destroy(&jacobian_T, MEM_S);
-    // matmn_destroy(&impulses);
 }
 
 void joint_constraint_post_solve(JointConstraint *c)
 {
 }
 
-void joint_constraint_solve(JointConstraint *c)
+void joint_constraint_solve(JointConstraint *c, unsigned int iterations)
 {   
     mem_reset_scratch_pool();
 
@@ -171,7 +167,7 @@ void joint_constraint_solve(JointConstraint *c)
 
     MatMN lambda = matmn_create(1, 1, MEM_SCRATCH_POOL);
     // printf("%d %d - %d %d - %d %d\n", lhs.m, lhs.n, rhs.m, rhs.n, lambda.m, lambda.n);
-    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
+    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
     matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
     MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
@@ -194,7 +190,7 @@ void joint_constraint_solve(JointConstraint *c)
     // matmn_destroy(&jacobian_T);
 }
 
-void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time)
+void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time, float beta)
 {
     mem_reset_scratch_pool();
 
@@ -244,7 +240,6 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
 
-    float beta = 0.2;
     float C = vec2_dot(vec2_sub(pb, pa), vec2_scale(n, -1.0));
     C = MIN(0.0, C + 0.01f);
 
@@ -263,7 +258,7 @@ void penetration_constraint_post_solve(PenetrationConstraint *c)
 {
 }
 
-void penetration_constraint_solve(PenetrationConstraint *c)
+void penetration_constraint_solve(PenetrationConstraint *c, unsigned int iterations)
 {
     mem_reset_scratch_pool();
     
@@ -286,7 +281,7 @@ void penetration_constraint_solve(PenetrationConstraint *c)
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
     MatMN lambda = matmn_create(2, 1, MEM_SCRATCH_POOL);
-    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
+    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
 
     MatMN old_lambda = matmn_create_zero_like(&c->cached_lambda, MEM_SCRATCH_POOL);
     matmn_copy(&c->cached_lambda, &old_lambda);
