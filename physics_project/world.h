@@ -5,6 +5,7 @@
 #include "collision.h"
 #include "constraint.h"
 #include "linked_list.h"
+#include "mem.h"
 
 #define MAX_CONSTRAINTS 100
 
@@ -61,9 +62,9 @@ void world_update(World *w, float delta_time)
                 {
                     gfx_draw_filled_circle(info[coll_iter].start.x, info[coll_iter].start.y, 5, (uint8_t[3]){255, 0, 0});
 
-                    PenetrationConstraint *pc = (PenetrationConstraint *)malloc(sizeof(PenetrationConstraint));
+                    PenetrationConstraint *pc = (PenetrationConstraint *)mem_malloc(sizeof(PenetrationConstraint));
                     penetration_constraint_create(pc, info[coll_iter].a, info[coll_iter].b, info[coll_iter].start, info[coll_iter].end, info[coll_iter].normal);
-                    List_push(&pc_list, pc);
+                    List_push(&pc_list, pc); // calling malloc here
                 }
             }
             next_j = n_j->next;

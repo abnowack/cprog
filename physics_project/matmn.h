@@ -1,8 +1,8 @@
 #ifndef MATMN_H
 #define MATMN_H
 
-#include <stdlib.h>
 #include <assert.h>
+#include "mem.h"
 
 #define MATMN_AT(MAT, I, J) ((MAT).data[(((MAT).n) * (I)) + (J)])
 
@@ -13,19 +13,19 @@ typedef struct
     float *data;
 } MatMN;
 
-MatMN matmn_create(unsigned int m, unsigned int n)
+MatMN matmn_create(unsigned int m, unsigned int n, MEMORY_TAG tag)
 {
     MatMN a;
     a.m = m;
     a.n = n;
-    a.data = (float *)calloc(m * n, sizeof(float));
+    a.data = (float *)mem_calloc(m * n, sizeof(float), tag);
 
     return a;
 }
 
 void matmn_destroy(MatMN *a)
 {
-    free(a->data);
+    mem_free(a->data);
 }
 
 void matmn_copy(MatMN *a, MatMN *z)
@@ -39,9 +39,9 @@ void matmn_copy(MatMN *a, MatMN *z)
     }
 }
 
-MatMN matmn_create_zero_like(MatMN *a)
+MatMN matmn_create_zero_like(MatMN *a, MEMORY_TAG tag)
 {
-    return matmn_create(a->m, a->n);
+    return matmn_create(a->m, a->n, tag);
 }
 
 // MatMN matmn_row(MatMN *a, unsigned int row)

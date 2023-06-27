@@ -5,6 +5,7 @@
 #include "vec2.h"
 #include "matmn.h"
 #include "util.h"
+#include "mem.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -39,8 +40,8 @@ void joint_constraint_create(JointConstraint *jc, Body *a, Body *b, Vec2 anchor)
     jc->b = b;
     jc->a_local_anchor = body_global_to_local_space(a, anchor);
     jc->b_local_anchor = body_global_to_local_space(b, anchor);
-    jc->jacobian = matmn_create(1, 6);
-    jc->cached_lambda = matmn_create(1, 1);
+    jc->jacobian = matmn_create(1, 6, MEM_HEAP);
+    jc->cached_lambda = matmn_create(1, 1, MEM_HEAP);
     jc->bias = 0;
 }
 
@@ -57,8 +58,8 @@ void penetration_constraint_create(PenetrationConstraint *pc, Body *a, Body *b, 
     pc->a_collision = body_global_to_local_space(a, a_collision);
     pc->b_collision = body_global_to_local_space(b, b_collision);
     pc->normal = body_global_to_local_space(a, normal);
-    pc->jacobian = matmn_create(2, 6);
-    pc->cached_lambda = matmn_create(2, 1);
+    pc->jacobian = matmn_create(2, 6, MEM_HEAP);
+    pc->cached_lambda = matmn_create(2, 1, MEM_HEAP);
     pc->bias = 0;
     pc->friction = 0.0;
 }
@@ -99,6 +100,8 @@ void constraint_velocities(Body *a, Body *b, MatMN *z)
 
 void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
 {
+    mem_reset_scratch_pool();
+
     Vec2 pa = body_local_to_global_space(c->a, c->a_local_anchor);
     Vec2 pb = body_local_to_global_space(c->b, c->b_local_anchor);
 
@@ -119,10 +122,10 @@ void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
     float j4 = 2.0 * vec2_cross(rb, vec2_sub(pb, pa));
     MATMN_AT(c->jacobian, 0, 5) = j4;
 
-    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n);
+    MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n, MEM_SCRATCH_POOL);
     matmn_mul(&jacobian_T, &c->cached_lambda, &impulses);
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
@@ -136,8 +139,8 @@ void joint_constraint_pre_solve(JointConstraint *c, float delta_time)
     C = MAX(0.0, C - 0.01f);
     c->bias = beta / delta_time * C;
 
-    matmn_destroy(&jacobian_T);
-    matmn_destroy(&impulses);
+    // matmn_destroy(&jacobian_T, MEM_S);
+    // matmn_destroy(&impulses);
 }
 
 void joint_constraint_post_solve(JointConstraint *c)
@@ -145,31 +148,33 @@ void joint_constraint_post_solve(JointConstraint *c)
 }
 
 void joint_constraint_solve(JointConstraint *c)
-{
-    MatMN v = matmn_create(6, 1);
+{   
+    mem_reset_scratch_pool();
+
+    MatMN v = matmn_create(6, 1, MEM_SCRATCH_POOL);
     constraint_velocities(c->a, c->b, &v);
-    MatMN invM = matmn_create(6, 6);
+    MatMN invM = matmn_create(6, 6, MEM_SCRATCH_POOL);
     constraint_get_inv_m(c->a, c->b, &invM);
 
-    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n);
+    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n, MEM_SCRATCH_POOL);
     matmn_mul(&c->jacobian, &invM, &aa_2);
-    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n);
+    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n, MEM_SCRATCH_POOL);
     matmn_mul(&aa_2, &jacobian_T, &lhs);
-    MatMN aa_1 = matmn_create(c->jacobian.m, v.n);
+    MatMN aa_1 = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
     matmn_mul(&c->jacobian, &v, &aa_1);
-    MatMN rhs = matmn_create_zero_like(&aa_1);
+    MatMN rhs = matmn_create_zero_like(&aa_1, MEM_SCRATCH_POOL);
     matmn_scale(&aa_1, -1.0, &rhs);
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
-    MatMN lambda = matmn_create(1, 1);
+    MatMN lambda = matmn_create(1, 1, MEM_SCRATCH_POOL);
     // printf("%d %d - %d %d - %d %d\n", lhs.m, lhs.n, rhs.m, rhs.n, lambda.m, lambda.n);
     matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
     matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
-    MatMN impulses = matmn_create(jacobian_T.m, lambda.n);
+    MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
     matmn_mul(&jacobian_T, &lambda, &impulses);
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
@@ -178,19 +183,21 @@ void joint_constraint_solve(JointConstraint *c)
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
 
-    matmn_destroy(&impulses);
-    matmn_destroy(&lambda);
-    matmn_destroy(&rhs);
-    matmn_destroy(&aa_1);
-    matmn_destroy(&lhs);
-    matmn_destroy(&aa_2);
-    matmn_destroy(&v);
-    matmn_destroy(&invM);
-    matmn_destroy(&jacobian_T);
+    // matmn_destroy(&impulses);
+    // matmn_destroy(&lambda);
+    // matmn_destroy(&rhs);
+    // matmn_destroy(&aa_1);
+    // matmn_destroy(&lhs);
+    // matmn_destroy(&aa_2);
+    // matmn_destroy(&v);
+    // matmn_destroy(&invM);
+    // matmn_destroy(&jacobian_T);
 }
 
 void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time)
 {
+    mem_reset_scratch_pool();
+
     Vec2 pa = body_local_to_global_space(c->a, c->a_collision);
     Vec2 pb = body_local_to_global_space(c->b, c->b_collision);
     Vec2 n = body_local_to_global_space(c->a, c->normal);
@@ -225,10 +232,10 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
         MATMN_AT(c->jacobian, 1, 5) = vec2_cross(rb, t);
     }
 
-    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n);
+    MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n, MEM_SCRATCH_POOL);
     matmn_mul(&jacobian_T, &c->cached_lambda, &impulses);
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
@@ -248,8 +255,8 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
     float e = MIN(c->a->restitution, c->b->restitution);
     c->bias = beta / delta_time * C + (e * vrel_dot_normal);
 
-    matmn_destroy(&jacobian_T);
-    matmn_destroy(&impulses);
+    // matmn_destroy(&jacobian_T);
+    // matmn_destroy(&impulses);
 }
 
 void penetration_constraint_post_solve(PenetrationConstraint *c)
@@ -258,28 +265,30 @@ void penetration_constraint_post_solve(PenetrationConstraint *c)
 
 void penetration_constraint_solve(PenetrationConstraint *c)
 {
-    MatMN v = matmn_create(6, 1);
+    mem_reset_scratch_pool();
+    
+    MatMN v = matmn_create(6, 1, MEM_SCRATCH_POOL);
     constraint_velocities(c->a, c->b, &v);
-    MatMN invM = matmn_create(6, 6);
+    MatMN invM = matmn_create(6, 6, MEM_SCRATCH_POOL);
     constraint_get_inv_m(c->a, c->b, &invM);
 
-    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m);
+    MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n);
+    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n, MEM_SCRATCH_POOL);
     matmn_mul(&c->jacobian, &invM, &aa_2);
-    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n);
+    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n, MEM_SCRATCH_POOL);
     matmn_mul(&aa_2, &jacobian_T, &lhs);
-    MatMN aa_1 = matmn_create(c->jacobian.m, v.n);
+    MatMN aa_1 = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
     matmn_mul(&c->jacobian, &v, &aa_1);
-    MatMN rhs = matmn_create_zero_like(&aa_1);
+    MatMN rhs = matmn_create_zero_like(&aa_1, MEM_SCRATCH_POOL);
     matmn_scale(&aa_1, -1.0, &rhs);
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
-    MatMN lambda = matmn_create(2, 1);
+    MatMN lambda = matmn_create(2, 1, MEM_SCRATCH_POOL);
     matmn_solve_gauss_seidel(&lhs, &rhs, &lambda);
 
-    MatMN old_lambda = matmn_create_zero_like(&c->cached_lambda);
+    MatMN old_lambda = matmn_create_zero_like(&c->cached_lambda, MEM_SCRATCH_POOL);
     matmn_copy(&c->cached_lambda, &old_lambda);
     matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
@@ -302,7 +311,7 @@ void penetration_constraint_solve(PenetrationConstraint *c)
 
     matmn_sub(&c->cached_lambda, &old_lambda, &lambda);
 
-    MatMN impulses = matmn_create(jacobian_T.m, lambda.n);
+    MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
     matmn_mul(&jacobian_T, &lambda, &impulses);
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
@@ -311,16 +320,16 @@ void penetration_constraint_solve(PenetrationConstraint *c)
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
 
-    matmn_destroy(&impulses);
-    matmn_destroy(&old_lambda);
-    matmn_destroy(&lambda);
-    matmn_destroy(&rhs);
-    matmn_destroy(&aa_1);
-    matmn_destroy(&lhs);
-    matmn_destroy(&aa_2);
-    matmn_destroy(&jacobian_T);
-    matmn_destroy(&v);
-    matmn_destroy(&invM);
+    // matmn_destroy(&impulses);
+    // matmn_destroy(&old_lambda);
+    // matmn_destroy(&lambda);
+    // matmn_destroy(&rhs);
+    // matmn_destroy(&aa_1);
+    // matmn_destroy(&lhs);
+    // matmn_destroy(&aa_2);
+    // matmn_destroy(&jacobian_T);
+    // matmn_destroy(&v);
+    // matmn_destroy(&invM);
 }
 
 #endif

@@ -8,7 +8,9 @@
 #include "force.h"
 #include "collision.h"
 
-#define FPS 60
+#include "mem.h"
+
+#define FPS 120
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 
 typedef struct
@@ -79,7 +81,7 @@ void app_setup(int window_width, int window_height)
     *floor = box_create(gfx.window_width - 50, 25);
     Body *b5 = (Body*)malloc(sizeof(Body));
     *b5 = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
-    b5->restitution = 0.2;
+    b5->restitution = 0.6;
     b5->friction = 0.5;
     List_push(&app.world.bodies, b5);
 
@@ -87,7 +89,7 @@ void app_setup(int window_width, int window_height)
     *left_wall = box_create(25, gfx.window_height - 50);
     Body *b6 = (Body*)malloc(sizeof(Body));
     *b6 = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
-    b6->restitution = 0.2;
+    b6->restitution = 0.6;
     b6->friction = 0.5;
     List_push(&app.world.bodies, b6);
 
@@ -95,7 +97,7 @@ void app_setup(int window_width, int window_height)
     *right_wall = box_create(25, gfx.window_height - 50);
     Body *b7 = (Body*)malloc(sizeof(Body));
     *b7 = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
-    b7->restitution = 0.2;
+    b7->restitution = 0.6;
     List_push(&app.world.bodies, b7);
 }
 
@@ -142,7 +144,7 @@ void app_input()
                     *c = circle_create(100.0);
                     Body *b = (Body*)malloc(sizeof(Body));
                     *b = body_create(CIRCLE, c, x, y, 1.0);
-                    b->restitution = 0.3;
+                    b->restitution = 0.6;
                     b->friction = 0.4;
                     List_push(&app.world.bodies, b);
                 }
@@ -152,7 +154,7 @@ void app_input()
                     *p = box_create(100, 100);
                     Body *b = (Body*)malloc(sizeof(Body));
                     *b = body_create(BOX, p, x, y, 1.0);
-                    b->restitution = 0.3;
+                    b->restitution = 0.6;
                     b->friction = 0.4;
                     List_push(&app.world.bodies, b);
                 }
@@ -168,7 +170,7 @@ void app_input()
                     *p = polygon_create(points, 5);
                     Body *b = (Body*)malloc(sizeof(Body));
                     *b = body_create(POLYGON, p, x, y, 1.0);
-                    b->restitution = 0.1;
+                    b->restitution = 0.6;
                     b->friction = 0.7;
                     List_push(&app.world.bodies, b);
                 }
@@ -186,6 +188,8 @@ void app_input()
 
 void app_update()
 {
+    mem_log.memory_allocated = 0;
+    mem_log.memory_calls = 0;
     gfx_clear_screen((uint8_t[3]){255, 255, 255});
 
     int time_to_wait = MILLISECONDS_PER_FRAME - (SDL_GetTicks() - time_previous_frame);
@@ -195,14 +199,15 @@ void app_update()
     }
 
     float delta_time = (SDL_GetTicks() - time_previous_frame) / 1000.0f;
-    if (delta_time > 0.016)
+    if (delta_time > (1.0f / (float)FPS))
     {
-        delta_time = 0.016;
+        delta_time = (1.0f / (float)FPS);
     }
 
     time_previous_frame = SDL_GetTicks();
 
     world_update(&app.world, delta_time);
+    printf("[MEM] %zu bytes allocated this update, %zu calls\n", mem_log.memory_allocated, mem_log.memory_calls);
 }
 
 void app_render()
