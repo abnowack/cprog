@@ -229,7 +229,6 @@ void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
     MatMN impulses = matmn_create(jacobian_T.m, c->cached_lambda.n);
-    // printf("%d %d - %d %d - %d %d\n", jacobian_T.m, jacobian_T.n, c->cached_lambda.m, c->cached_lambda.n, impulses.m, impulses.n);
     matmn_mul(&jacobian_T, &c->cached_lambda, &impulses);
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
@@ -290,6 +289,7 @@ void penetration_constraint_solve(PenetrationConstraint *c)
     if (c->friction > 0)
     {
         float max_friction = c->cached_lambda.data[0] * c->friction;
+
         if (c->cached_lambda.data[1] < -max_friction)
         {
             c->cached_lambda.data[1] = -max_friction;
@@ -310,9 +310,6 @@ void penetration_constraint_solve(PenetrationConstraint *c)
 
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
-
-    matmn_print(&impulses);
-    printf("\n");
 
     matmn_destroy(&impulses);
     matmn_destroy(&old_lambda);

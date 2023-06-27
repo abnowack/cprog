@@ -4,13 +4,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define MATMN_AT(MAT, I, J) ((MAT).data[(((MAT).n) * ((MAT).s) * (I)) + (J)])
+#define MATMN_AT(MAT, I, J) ((MAT).data[(((MAT).n) * (I)) + (J)])
 
 typedef struct
 {
     unsigned int m; // rows
     unsigned int n; // cols
-    unsigned int s; // stride
     float *data;
 } MatMN;
 
@@ -19,7 +18,6 @@ MatMN matmn_create(unsigned int m, unsigned int n)
     MatMN a;
     a.m = m;
     a.n = n;
-    a.s = 1;
     a.data = (float *)calloc(m * n, sizeof(float));
 
     return a;
@@ -46,25 +44,23 @@ MatMN matmn_create_zero_like(MatMN *a)
     return matmn_create(a->m, a->n);
 }
 
-MatMN matmn_row(MatMN *a, unsigned int row)
-{
-    MatMN z;
-    z.m = 1;
-    z.n = a->n;
-    z.s = 1;
-    z.data = &MATMN_AT(*a, row, 0);
-    return z;
-}
+// MatMN matmn_row(MatMN *a, unsigned int row)
+// {
+//     MatMN z;
+//     z.m = 1;
+//     z.n = a->n;
+//     z.data = &MATMN_AT(*a, row, 0);
+//     return z;
+// }
 
-MatMN matmn_col(MatMN *a, unsigned int col)
-{
-    MatMN z;
-    z.m = a->m;
-    z.n = 1;
-    z.s = a->n;
-    z.data = &MATMN_AT(*a, 0, col);
-    return z;
-}
+// MatMN matmn_col(MatMN *a, unsigned int col)
+// {
+//     MatMN z;
+//     z.m = a->m;
+//     z.n = 1;
+//     z.data = &MATMN_AT(*a, 0, col);
+//     return z;
+// }
 
 void matmn_transpose(MatMN *a, MatMN *z)
 {
@@ -89,6 +85,14 @@ void matmn_scale(MatMN *a, float b, MatMN *z)
     for (unsigned int i = 0; i < (a->m * a->n); i++)
     {
         z->data[i] = a->data[i] * b;
+    }
+}
+
+void matmn_set(float a, MatMN *z)
+{
+    for (unsigned int i = 0; i < (z->m * z->n); i++)
+    {
+        z->data[i] = a;
     }
 }
 
@@ -137,24 +141,40 @@ void matmn_mul(MatMN *a, MatMN *b, MatMN *z)
     }
 }
 
-void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *z)
+float matmn_dot_prod(MatMN *a, MatMN *b)
+{
+    assert(a->m == 1);
+    assert(b->n == 1);
+    assert(a->n == b->m);
+
+    float dot_prod = 0;
+    for (unsigned int i = 0; i < a->n; i++)
+    {
+        dot_prod += MATMN_AT(*a, 0, i) * MATMN_AT(*b, i, 0);
+    }
+    return dot_prod;
+}
+
+void matmn_solve_gauss_seidel(MatMN *a, MatMN *b, MatMN *x)
 {
     assert(b->n == 1);
-    assert(z->n == b->n);
+    assert(x->n == 1);
+    assert(x->m == b->m);
 
-    for (unsigned int iter = 0; iter < b->n; iter++)
+    matmn_set(0.0, x);
+
+    for (unsigned int iter = 0; iter < 10; iter++)
     {
-        for (unsigned int i = 0; i < b->n; i++)
+        for (unsigned int i = 0; i < b->m; i++)
         {
             float dot_prod = 0;
-            for (unsigned int j = 0; j < b->n; j++)
+            for(unsigned int j = 0; j < x->m; j++)
             {
-                dot_prod += MATMN_AT(*a, i, j) * MATMN_AT(*z, j, 0);
+                dot_prod += MATMN_AT(*x, j, 0) * MATMN_AT(*a, i, j);
             }
-            
-            float dx = (MATMN_AT(*b, 0, i) / MATMN_AT(*a, i, i)) - dot_prod / MATMN_AT(*a, i, i);
-            if (dx == dx)
-                MATMN_AT(*z, i, 0) += dx;
+
+            if (MATMN_AT(*a, i, i) != 0.0)
+                MATMN_AT(*x, i, 0) = MATMN_AT(*x, i, 0) + MATMN_AT(*b, i, 0) / MATMN_AT(*a, i, i) - dot_prod / MATMN_AT(*a, i, i);
         }
     }
 }
