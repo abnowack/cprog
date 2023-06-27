@@ -60,7 +60,7 @@ void world_update(World *w, float delta_time)
             {
                 for (unsigned int coll_iter = 0; coll_iter < n_collisions; coll_iter++)
                 {
-                    gfx_draw_filled_circle(info[coll_iter].start.x, info[coll_iter].start.y, 5, (uint8_t[3]){255, 0, 0});
+                    gfx_draw_filled_square(info[coll_iter].start.x, info[coll_iter].start.y, 8, (uint8_t[3]){255, 0, 0});
 
                     PenetrationConstraint *pc = (PenetrationConstraint *)mem_malloc(sizeof(PenetrationConstraint));
                     penetration_constraint_create(pc, info[coll_iter].a, info[coll_iter].b, info[coll_iter].start, info[coll_iter].end, info[coll_iter].normal);

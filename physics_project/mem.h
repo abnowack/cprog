@@ -9,11 +9,11 @@
 
 struct MemoryLog
 {
-    unsigned long memory_allocated;
-    unsigned long memory_calls;
+    unsigned long heap_memory_allocated;
+    unsigned long heap_memory_calls;
 };
 
-struct MemoryLog mem_log = {.memory_allocated = 0, .memory_calls = 0};
+struct MemoryLog mem_log = {.heap_memory_allocated = 0, .heap_memory_calls = 0};
 
 struct ScratchPool
 {
@@ -41,8 +41,8 @@ void *mem_calloc(size_t n, size_t size, MEMORY_TAG tag)
     {
 #ifdef DEBUG_MEM
         // printf("[MEM] Allocating %zu objects of size %zu\n", n, size);
-        mem_log.memory_allocated += n * size;
-        mem_log.memory_calls++;
+        mem_log.heap_memory_allocated += n * size;
+        mem_log.heap_memory_calls++;
 #endif
         return calloc(n, size);
     }
@@ -58,8 +58,8 @@ void *mem_malloc(size_t size)
 {
 #ifdef DEBUG_MEM
     // printf("[MEM] Allocating %zu objects of size %zu\n", n, size);
-    mem_log.memory_allocated += size;
-    mem_log.memory_calls++;
+    mem_log.heap_memory_allocated += size;
+    mem_log.heap_memory_calls++;
 #endif
 
     return malloc(size);

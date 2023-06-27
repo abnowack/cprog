@@ -10,7 +10,7 @@
 
 #include "mem.h"
 
-#define FPS 120
+#define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 
 typedef struct
@@ -188,8 +188,8 @@ void app_input()
 
 void app_update()
 {
-    mem_log.memory_allocated = 0;
-    mem_log.memory_calls = 0;
+    mem_log.heap_memory_allocated = 0;
+    mem_log.heap_memory_calls = 0;
     gfx_clear_screen((uint8_t[3]){255, 255, 255});
 
     int time_to_wait = MILLISECONDS_PER_FRAME - (SDL_GetTicks() - time_previous_frame);
@@ -201,13 +201,14 @@ void app_update()
     float delta_time = (SDL_GetTicks() - time_previous_frame) / 1000.0f;
     if (delta_time > (1.0f / (float)FPS))
     {
+        printf("%f > %f\n", delta_time, (1.0f / (float)FPS));
         delta_time = (1.0f / (float)FPS);
     }
 
     time_previous_frame = SDL_GetTicks();
 
     world_update(&app.world, delta_time);
-    printf("[MEM] %zu bytes allocated this update, %zu calls\n", mem_log.memory_allocated, mem_log.memory_calls);
+    // printf("[MEM] %zu bytes allocated this update, %zu calls\n", mem_log.heap_memory_allocated, mem_log.heap_memory_calls);
 }
 
 void app_render()
