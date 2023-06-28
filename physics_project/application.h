@@ -41,63 +41,70 @@ void app_setup(int window_width, int window_height)
 
     Circle *c1 = (Circle *)malloc(sizeof(Circle));
     *c1 = circle_create(30.0);
-    Body *b1 = (Body*)malloc(sizeof(Body));
+    Body *b1 = (Body *)malloc(sizeof(Body));
     *b1 = body_create(CIRCLE, c1, gfx.window_width / 2, gfx.window_height / 2, 0.0);
+    body_set_texture(b1, "assets/bowlingball.png");
     List_push(&app.world.bodies, b1);
 
     Polygon *box = (Polygon *)malloc(sizeof(Polygon));
     *box = box_create(800, 50);
-    Body *b2 = (Body*)malloc(sizeof(Body));
+    Body *b2 = (Body *)malloc(sizeof(Body));
     *b2 = body_create(BOX, box, b1->position.x, b1->position.y + 200, 1.0);
     b2->friction = 0.5;
-    b2->restitution = 0.5;
+    b2->restitution = 0.1;
+    // body_set_fill_color(b2, (uint8_t[3]){163, 110, 11});
     List_push(&app.world.bodies, b2);
 
-    JointConstraint *jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    JointConstraint *jc = (JointConstraint *)malloc(sizeof(JointConstraint));
     joint_constraint_create(jc, b1, b2, b1->position);
     List_push(&app.world.joint_constraints, jc);
 
     Circle *c2 = (Circle *)malloc(sizeof(Circle));
     *c2 = circle_create(20.0);
-    Body *b3 = (Body*)malloc(sizeof(Body));
+    Body *b3 = (Body *)malloc(sizeof(Body));
     *b3 = body_create(CIRCLE, c2, b2->position.x, b2->position.y + 150, 1.0);
+    body_set_texture(b3, "assets/bowlingball.png");
     List_push(&app.world.bodies, b3);
 
-    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    jc = (JointConstraint *)malloc(sizeof(JointConstraint));
     joint_constraint_create(jc, b2, b3, b2->position);
     List_push(&app.world.joint_constraints, jc);
 
     Circle *c3 = (Circle *)malloc(sizeof(Circle));
     *c3 = circle_create(20.0);
-    Body *b4 = (Body*)malloc(sizeof(Body));
+    Body *b4 = (Body *)malloc(sizeof(Body));
     *b4 = body_create(CIRCLE, c3, b3->position.x, b3->position.y + 150, 1.0);
+    body_set_texture(b4, "assets/bowlingball.png");
     List_push(&app.world.bodies, b4);
 
-    jc = (JointConstraint*)malloc(sizeof(JointConstraint));
+    jc = (JointConstraint *)malloc(sizeof(JointConstraint));
     joint_constraint_create(jc, b3, b4, b3->position);
     List_push(&app.world.joint_constraints, jc);
 
     Polygon *floor = (Polygon *)malloc(sizeof(Polygon));
     *floor = box_create(gfx.window_width - 50, 25);
-    Body *b5 = (Body*)malloc(sizeof(Body));
+    Body *b5 = (Body *)malloc(sizeof(Body));
     *b5 = body_create(BOX, floor, gfx.window_width / 2.0, gfx.window_height - 25, 0.0);
-    b5->restitution = 0.6;
+    b5->restitution = 0.1;
     b5->friction = 0.5;
+    body_set_fill_color(b5, (uint8_t[3]){74, 50, 6});
     List_push(&app.world.bodies, b5);
 
     Polygon *left_wall = (Polygon *)malloc(sizeof(Polygon));
     *left_wall = box_create(25, gfx.window_height - 50);
-    Body *b6 = (Body*)malloc(sizeof(Body));
+    Body *b6 = (Body *)malloc(sizeof(Body));
     *b6 = body_create(BOX, left_wall, 12, gfx.window_height / 2.0 + 12, 0.0);
-    b6->restitution = 0.6;
+    b6->restitution = 0.1;
     b6->friction = 0.5;
+    body_set_fill_color(b6, (uint8_t[3]){74, 50, 6});
     List_push(&app.world.bodies, b6);
 
     Polygon *right_wall = (Polygon *)malloc(sizeof(Polygon));
     *right_wall = box_create(25, gfx.window_height - 50);
-    Body *b7 = (Body*)malloc(sizeof(Body));
+    Body *b7 = (Body *)malloc(sizeof(Body));
     *b7 = body_create(BOX, right_wall, gfx.window_width - 12, gfx.window_height / 2.0 + 12, 0.0);
-    b7->restitution = 0.6;
+    b7->restitution = 0.1;
+    body_set_fill_color(b7, (uint8_t[3]){74, 50, 6});
     List_push(&app.world.bodies, b7);
 }
 
@@ -142,20 +149,22 @@ void app_input()
                 {
                     Circle *c = (Circle *)malloc(sizeof(Circle));
                     *c = circle_create(100.0);
-                    Body *b = (Body*)malloc(sizeof(Body));
+                    Body *b = (Body *)malloc(sizeof(Body));
                     *b = body_create(CIRCLE, c, x, y, 1.0);
                     b->restitution = 0.6;
                     b->friction = 0.4;
+                    body_set_texture(b, "assets/basketball.png");
                     List_push(&app.world.bodies, b);
                 }
                 else if (app.new_shape_type == BOX)
                 {
                     Polygon *p = (Polygon *)malloc(sizeof(Polygon));
                     *p = box_create(100, 100);
-                    Body *b = (Body*)malloc(sizeof(Body));
+                    Body *b = (Body *)malloc(sizeof(Body));
                     *b = body_create(BOX, p, x, y, 1.0);
                     b->restitution = 0.6;
                     b->friction = 0.4;
+                    body_set_texture(b, "assets/crate.png");
                     List_push(&app.world.bodies, b);
                 }
                 else if (app.new_shape_type == POLYGON)
@@ -168,7 +177,7 @@ void app_input()
                     points[3] = (Vec2){20, -60};
                     points[4] = (Vec2){40, 20};
                     *p = polygon_create(points, 5);
-                    Body *b = (Body*)malloc(sizeof(Body));
+                    Body *b = (Body *)malloc(sizeof(Body));
                     *b = body_create(POLYGON, p, x, y, 1.0);
                     b->restitution = 0.6;
                     b->friction = 0.7;
@@ -201,7 +210,7 @@ void app_update()
     float delta_time = (SDL_GetTicks() - time_previous_frame) / 1000.0f;
     if (delta_time > (1.0f / (float)FPS))
     {
-        printf("%f > %f\n", delta_time, (1.0f / (float)FPS));
+        // printf("%f > %f\n", delta_time, (1.0f / (float)FPS));
         delta_time = (1.0f / (float)FPS);
     }
 
@@ -229,27 +238,62 @@ void app_render()
         //     draw_color[2] = collide_color[2];
         // }
 
-        Body *b = (Body*)n->data;
+        Body *b = (Body *)n->data;
 
         if (b->shape_type == CIRCLE)
         {
-            Circle *c = (Circle *)(b->shape);
-            gfx_draw_circle(b->position.x, b->position.y, c->radius, b->theta, draw_color);
+            if (!app.debug && b->texture)
+            {
+                Circle *c = (Circle *)(b->shape);
+                gfx_draw_texture(b->texture, b->position.x, b->position.y, b->theta, c->radius * 2, c->radius * 2);
+            }
+            else if (!app.debug && b->fill_color[0] >= 0)
+            {
+
+            }
+            else
+            {
+                Circle *c = (Circle *)(b->shape);
+                gfx_draw_circle(b->position.x, b->position.y, c->radius, b->theta, draw_color);
+            }
         }
-        else if (b->shape_type == BOX || b->shape_type == POLYGON)
+        else if (b->shape_type == BOX)
         {
             Polygon *p = (Polygon *)(b->shape);
-            gfx_draw_polygon(b->position.x, b->position.y, p->global_vertices, p->n_vertices, draw_color);
+            float width = p->local_vertices[1].x - p->local_vertices[0].x;
+            float height = p->local_vertices[2].y - p->local_vertices[1].y;
+
+            if (!app.debug && b->texture)
+            {
+                gfx_draw_texture(b->texture, b->position.x, b->position.y, b->theta, width, height);
+            }
+            else if (!app.debug && b->has_fill_color)
+            {
+                gfx_draw_filled_rect(b->position.x, b->position.y, width, height, b->fill_color);
+            }
+            else
+            {
+                gfx_draw_polygon(b->position.x, b->position.y, p->global_vertices, p->n_vertices, draw_color);
+            }
         }
-        else
+        else if (b->shape_type == POLYGON)
         {
+            // if (!app.debug && b->fill_color[0] >= 0)
+            // {
+                
+            // }
+            // else
+            {
+                Polygon *p = (Polygon *)(b->shape);
+                gfx_draw_polygon(b->position.x, b->position.y, p->global_vertices, p->n_vertices, draw_color);
+            }
         }
         next = n->next;
     }
 
-    for(Node *n = app.world.joint_constraints.start, *next; n; n = next)
+    for (Node *n = app.world.joint_constraints.start, *next; n; n = next)
     {
-        JointConstraint *jc = (JointConstraint*)n->data;
+        JointConstraint *jc = (JointConstraint *)n->data;
         Vec2 pa = body_local_to_global_space(jc->a, jc->a_local_anchor);
         Vec2 pb = body_local_to_global_space(jc->b, jc->a_local_anchor);
         gfx_draw_line(pa.x, pa.y, pb.x, pb.y, collide_color);

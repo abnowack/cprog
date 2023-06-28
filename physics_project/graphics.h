@@ -77,6 +77,18 @@ void gfx_draw_filled_square(int x, int y, int width, uint8_t color[3])
     SDL_RenderFillRect(gfx.renderer, &r);
 }
 
+void gfx_draw_filled_rect(int x, int y, int width, int height, uint8_t color[3])
+{
+    // x, y is center of rect
+    SDL_SetRenderDrawColor(gfx.renderer, color[0], color[1], color[2], 255);
+
+    int upper_left_x = x - (int)(width / 2.0);
+    int upper_left_y = y - (int)(height / 2.0);
+
+    SDL_Rect r = {.x = upper_left_x, .y = upper_left_y, .w = width, .h = height};
+    SDL_RenderFillRect(gfx.renderer, &r);
+}
+
 void gfx_draw_circle(int x, int y, int radius, float angle, uint8_t color[3])
 {
     unsigned int n_slices = 100;
@@ -121,6 +133,15 @@ void gfx_draw_polygon(int x, int y, Vec2 *vertices, unsigned int n_vertices, uin
     SDL_RenderDrawLines(gfx.renderer, points, n_vertices + 1);
 
     gfx_draw_filled_square(x, y, 8, color);
+}
+
+void gfx_draw_texture(SDL_Texture *texture, int x, int y, float radian, int width, int height)
+{
+    int upper_left_x = x - (int)(width / 2.0);
+    int upper_left_y = y - (int)(height / 2.0);
+    SDL_Rect r = {.x = upper_left_x, .y = upper_left_y, .w = width, .h = height};
+    float angle = radian / (2 * M_PI) * 360.0;
+    SDL_RenderCopyEx(gfx.renderer, texture, NULL, &r, angle, NULL, SDL_FLIP_NONE);
 }
 
 #endif

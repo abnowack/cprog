@@ -3,6 +3,10 @@
 
 #include "vec2.h"
 #include "shape.h"
+#include "graphics.h"
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 typedef struct
 {
@@ -27,6 +31,10 @@ typedef struct
 
     float restitution;
     float friction;
+
+    SDL_Texture *texture;
+    uint8_t fill_color[3];
+    bool has_fill_color;
 } Body;
 
 void body_clear_force(Body *);
@@ -73,7 +81,28 @@ Body body_create(ShapeType shape_type, void *shape, float x_pos, float y_pos, fl
 
     shape_update_vertices(b.theta, b.position, b.shape_type, b.shape);
 
+    b.texture = NULL;
+    b.has_fill_color = false;
+
     return b;
+}
+
+void body_set_texture(Body *b, char *texture_file_name)
+{
+    SDL_Surface *surface = IMG_Load(texture_file_name);
+    if (surface)
+    {
+        b->texture = SDL_CreateTextureFromSurface(gfx.renderer, surface);
+        SDL_FreeSurface(surface);
+    }
+}
+
+void body_set_fill_color(Body *b, uint8_t color[3])
+{
+    b->has_fill_color = true;
+    b->fill_color[0] = color[0];
+    b->fill_color[1] = color[1];
+    b->fill_color[2] = color[2];
 }
 
 Vec2 body_local_to_global_space(Body *b, Vec2 point)
