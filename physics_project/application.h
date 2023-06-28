@@ -10,7 +10,7 @@
 
 #include "mem.h"
 
-#define FPS 60
+#define FPS 30
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 
 typedef struct
@@ -201,7 +201,7 @@ void app_update()
     float delta_time = (SDL_GetTicks() - time_previous_frame) / 1000.0f;
     if (delta_time > (1.0f / (float)FPS))
     {
-        // printf("%f > %f\n", delta_time, (1.0f / (float)FPS));
+        printf("%f > %f\n", delta_time, (1.0f / (float)FPS));
         delta_time = (1.0f / (float)FPS);
     }
 

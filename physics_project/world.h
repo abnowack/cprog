@@ -30,10 +30,10 @@ void world_create(World *w, float gravity)
     w->bodies = list_create_empty();
     w->joint_constraints = list_create_empty();
 
-    w->joint_beta = 0.5;
-    w->penetration_beta = 0.5;
+    w->joint_beta = 0.2;
+    w->penetration_beta = 0.2;
     w->constraint_iterations = 10;
-    w->gauss_seidel_iterations = 3;
+    w->gauss_seidel_iterations = 5;
 }
 
 void world_update(World *w, float delta_time)

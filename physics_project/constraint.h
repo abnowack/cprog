@@ -155,19 +155,31 @@ void joint_constraint_solve(JointConstraint *c, unsigned int iterations)
     MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n, MEM_SCRATCH_POOL);
-    matmn_mul(&c->jacobian, &invM, &aa_2);
-    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n, MEM_SCRATCH_POOL);
-    matmn_mul(&aa_2, &jacobian_T, &lhs);
-    MatMN aa_1 = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
-    matmn_mul(&c->jacobian, &v, &aa_1);
-    MatMN rhs = matmn_create_zero_like(&aa_1, MEM_SCRATCH_POOL);
-    matmn_scale(&aa_1, -1.0, &rhs);
+    // lhs = J @ invM @ J.T
+    MatMN lhs = matmn_create(c->jacobian.m, jacobian_T.n, MEM_SCRATCH_POOL);
+    MATMN_AT(lhs, 0, 0) = MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(invM, 0, 0);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(invM, 1, 1);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(invM, 2, 2);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(invM, 3, 3);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(invM, 4, 4);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(invM, 5, 5);
+    
+    // rhs = - (J @ v)
+    MatMN rhs = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
+    MATMN_AT(rhs, 0, 0) = -1.0f * (MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(v, 0, 0));
+    MATMN_AT(rhs, 0, 0) += -1.0f * (MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(v, 1, 0));
+    MATMN_AT(rhs, 0, 0) += -1.0f * (MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(v, 2, 0));
+    MATMN_AT(rhs, 0, 0) += -1.0f * (MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(v, 3, 0));
+    MATMN_AT(rhs, 0, 0) += -1.0f * (MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(v, 4, 0));
+    MATMN_AT(rhs, 0, 0) += -1.0f * (MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(v, 5, 0));
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
     MatMN lambda = matmn_create(1, 1, MEM_SCRATCH_POOL);
-    // printf("%d %d - %d %d - %d %d\n", lhs.m, lhs.n, rhs.m, rhs.n, lambda.m, lambda.n);
-    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
+    // matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
+    if (MATMN_AT(lhs, 0, 0) != 0)
+    {
+        MATMN_AT(lambda, 0, 0) = MATMN_AT(rhs, 0, 0) / MATMN_AT(lhs, 0, 0);
+    }
     matmn_add(&c->cached_lambda, &lambda, &c->cached_lambda);
 
     MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
@@ -178,16 +190,6 @@ void joint_constraint_solve(JointConstraint *c, unsigned int iterations)
 
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
-
-    // matmn_destroy(&impulses);
-    // matmn_destroy(&lambda);
-    // matmn_destroy(&rhs);
-    // matmn_destroy(&aa_1);
-    // matmn_destroy(&lhs);
-    // matmn_destroy(&aa_2);
-    // matmn_destroy(&v);
-    // matmn_destroy(&invM);
-    // matmn_destroy(&jacobian_T);
 }
 
 void penetration_constraint_pre_solve(PenetrationConstraint *c, float delta_time, float beta)
@@ -270,18 +272,60 @@ void penetration_constraint_solve(PenetrationConstraint *c, unsigned int iterati
     MatMN jacobian_T = matmn_create(c->jacobian.n, c->jacobian.m, MEM_SCRATCH_POOL);
     matmn_transpose(&(c->jacobian), &jacobian_T);
 
-    MatMN aa_2 = matmn_create(c->jacobian.m, invM.n, MEM_SCRATCH_POOL);
-    matmn_mul(&c->jacobian, &invM, &aa_2);
-    MatMN lhs = matmn_create(aa_2.m, jacobian_T.n, MEM_SCRATCH_POOL);
-    matmn_mul(&aa_2, &jacobian_T, &lhs);
-    MatMN aa_1 = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
-    matmn_mul(&c->jacobian, &v, &aa_1);
-    MatMN rhs = matmn_create_zero_like(&aa_1, MEM_SCRATCH_POOL);
-    matmn_scale(&aa_1, -1.0, &rhs);
+    // MatMN aa_2 = matmn_create(c->jacobian.m, invM.n, MEM_SCRATCH_POOL);
+    // matmn_mul(&c->jacobian, &invM, &aa_2);
+    // MatMN lhs = matmn_create(aa_2.m, jacobian_T.n, MEM_SCRATCH_POOL);
+    // matmn_mul(&aa_2, &jacobian_T, &lhs);
+
+    // lhs = J @ invM @ J.T
+    MatMN lhs = matmn_create(c->jacobian.m, jacobian_T.n, MEM_SCRATCH_POOL);
+    MATMN_AT(lhs, 0, 0) = MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(invM, 0, 0) * MATMN_AT(c->jacobian, 0, 0);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(invM, 1, 1) * MATMN_AT(c->jacobian, 0, 1);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(invM, 2, 2) * MATMN_AT(c->jacobian, 0, 2);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(invM, 3, 3) * MATMN_AT(c->jacobian, 0, 3);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(invM, 4, 4) * MATMN_AT(c->jacobian, 0, 4);
+    MATMN_AT(lhs, 0, 0) += MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(invM, 5, 5) * MATMN_AT(c->jacobian, 0, 5);
+
+    MATMN_AT(lhs, 0, 1) = MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(invM, 0, 0) * MATMN_AT(c->jacobian, 1, 0);
+    MATMN_AT(lhs, 0, 1) += MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(invM, 1, 1) * MATMN_AT(c->jacobian, 1, 1);
+    MATMN_AT(lhs, 0, 1) += MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(invM, 2, 2) * MATMN_AT(c->jacobian, 1, 2);
+    MATMN_AT(lhs, 0, 1) += MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(invM, 3, 3) * MATMN_AT(c->jacobian, 1, 3);
+    MATMN_AT(lhs, 0, 1) += MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(invM, 4, 4) * MATMN_AT(c->jacobian, 1, 4);
+    MATMN_AT(lhs, 0, 1) += MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(invM, 5, 5) * MATMN_AT(c->jacobian, 1, 5);
+
+    MATMN_AT(lhs, 1, 0) = MATMN_AT(lhs, 0, 1);
+
+    MATMN_AT(lhs, 1, 1) = MATMN_AT(c->jacobian, 1, 0) * MATMN_AT(invM, 0, 0) * MATMN_AT(c->jacobian, 1, 0);
+    MATMN_AT(lhs, 1, 1) += MATMN_AT(c->jacobian, 1, 1) * MATMN_AT(invM, 1, 1) * MATMN_AT(c->jacobian, 1, 1);
+    MATMN_AT(lhs, 1, 1) += MATMN_AT(c->jacobian, 1, 2) * MATMN_AT(invM, 2, 2) * MATMN_AT(c->jacobian, 1, 2);
+    MATMN_AT(lhs, 1, 1) += MATMN_AT(c->jacobian, 1, 3) * MATMN_AT(invM, 3, 3) * MATMN_AT(c->jacobian, 1, 3);
+    MATMN_AT(lhs, 1, 1) += MATMN_AT(c->jacobian, 1, 4) * MATMN_AT(invM, 4, 4) * MATMN_AT(c->jacobian, 1, 4);
+    MATMN_AT(lhs, 1, 1) += MATMN_AT(c->jacobian, 1, 5) * MATMN_AT(invM, 5, 5) * MATMN_AT(c->jacobian, 1, 5);
+
+    // rhs = - (J @ v)
+    MatMN rhs = matmn_create(c->jacobian.m, v.n, MEM_SCRATCH_POOL);
+    MATMN_AT(rhs, 0, 0) = -1.0f * MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(v, 0, 0);
+    MATMN_AT(rhs, 0, 0) += -1.0f * MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(v, 1, 0);
+    MATMN_AT(rhs, 0, 0) += -1.0f * MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(v, 2, 0);
+    MATMN_AT(rhs, 0, 0) += -1.0f * MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(v, 3, 0);
+    MATMN_AT(rhs, 0, 0) += -1.0f * MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(v, 4, 0);
+    MATMN_AT(rhs, 0, 0) += -1.0f * MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(v, 5, 0);
     MATMN_AT(rhs, 0, 0) -= c->bias;
 
+    MATMN_AT(rhs, 1, 0) = -1.0f * MATMN_AT(c->jacobian, 1, 0) * MATMN_AT(v, 0, 0);
+    MATMN_AT(rhs, 1, 0) += -1.0f * MATMN_AT(c->jacobian, 1, 1) * MATMN_AT(v, 1, 0);
+    MATMN_AT(rhs, 1, 0) += -1.0f * MATMN_AT(c->jacobian, 1, 2) * MATMN_AT(v, 2, 0);
+    MATMN_AT(rhs, 1, 0) += -1.0f * MATMN_AT(c->jacobian, 1, 3) * MATMN_AT(v, 3, 0);
+    MATMN_AT(rhs, 1, 0) += -1.0f * MATMN_AT(c->jacobian, 1, 4) * MATMN_AT(v, 4, 0);
+    MATMN_AT(rhs, 1, 0) += -1.0f * MATMN_AT(c->jacobian, 1, 5) * MATMN_AT(v, 5, 0);
+
     MatMN lambda = matmn_create(2, 1, MEM_SCRATCH_POOL);
-    matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
+    // matmn_solve_gauss_seidel(&lhs, &rhs, &lambda, iterations);
+    MATMN_AT(lambda, 0, 0) = MATMN_AT(lhs, 1, 1) * MATMN_AT(rhs, 0, 0) - MATMN_AT(lhs, 0, 1) * MATMN_AT(rhs, 1, 0);
+    MATMN_AT(lambda, 0, 0) /= MATMN_AT(lhs, 0, 0) * MATMN_AT(lhs, 1, 1) - MATMN_AT(lhs, 0, 1) * MATMN_AT(lhs, 1, 0);
+    MATMN_AT(lambda, 1, 0) = MATMN_AT(lhs, 1, 0) * MATMN_AT(rhs, 0, 0) - MATMN_AT(lhs, 0, 0) * MATMN_AT(rhs, 1, 0);
+    MATMN_AT(lambda, 1, 0) /= -1.0f * MATMN_AT(lhs, 0, 0) * MATMN_AT(lhs, 1, 1) + MATMN_AT(lhs, 0, 1) * MATMN_AT(lhs, 1, 0);
+
 
     MatMN old_lambda = matmn_create_zero_like(&c->cached_lambda, MEM_SCRATCH_POOL);
     matmn_copy(&c->cached_lambda, &old_lambda);
@@ -307,24 +351,21 @@ void penetration_constraint_solve(PenetrationConstraint *c, unsigned int iterati
     matmn_sub(&c->cached_lambda, &old_lambda, &lambda);
 
     MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
-    matmn_mul(&jacobian_T, &lambda, &impulses);
+    // matmn_mul(&jacobian_T, &lambda, &impulses);
+
+    MATMN_AT(impulses, 0, 0) = MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 0) * MATMN_AT(lambda, 1, 0);
+    MATMN_AT(impulses, 1, 0) = MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 1) * MATMN_AT(lambda, 1, 0);
+    MATMN_AT(impulses, 2, 0) = MATMN_AT(c->jacobian, 0, 2) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 2) * MATMN_AT(lambda, 1, 0);
+    MATMN_AT(impulses, 3, 0) = MATMN_AT(c->jacobian, 0, 3) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 3) * MATMN_AT(lambda, 1, 0);
+    MATMN_AT(impulses, 4, 0) = MATMN_AT(c->jacobian, 0, 4) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 4) * MATMN_AT(lambda, 1, 0);
+    MATMN_AT(impulses, 5, 0) = MATMN_AT(c->jacobian, 0, 5) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 5) * MATMN_AT(lambda, 1, 0);
+
 
     body_apply_impulse_linear(c->a, (Vec2){MATMN_AT(impulses, 0, 0), MATMN_AT(impulses, 1, 0)});
     body_apply_impulse_angular(c->a, MATMN_AT(impulses, 2, 0));
 
     body_apply_impulse_linear(c->b, (Vec2){MATMN_AT(impulses, 3, 0), MATMN_AT(impulses, 4, 0)});
     body_apply_impulse_angular(c->b, MATMN_AT(impulses, 5, 0));
-
-    // matmn_destroy(&impulses);
-    // matmn_destroy(&old_lambda);
-    // matmn_destroy(&lambda);
-    // matmn_destroy(&rhs);
-    // matmn_destroy(&aa_1);
-    // matmn_destroy(&lhs);
-    // matmn_destroy(&aa_2);
-    // matmn_destroy(&jacobian_T);
-    // matmn_destroy(&v);
-    // matmn_destroy(&invM);
 }
 
 #endif

@@ -14,44 +14,44 @@ typedef union {
     };
 } Vec2;
 
-Vec2 vec2_add(Vec2 v1, Vec2 v2)
+extern inline Vec2 vec2_add(Vec2 v1, Vec2 v2)
 {
     return (Vec2){.x = v1.x + v2.x, .y = v1.y + v2.y};
 }
 
-Vec2 vec2_sub(Vec2 v1, Vec2 v2)
+extern inline Vec2 vec2_sub(Vec2 v1, Vec2 v2)
 {
     return (Vec2){v1.x - v2.x, v1.y - v2.y};
 }
 
-Vec2 vec2_scale(Vec2 v1, float a)
+extern inline Vec2 vec2_scale(Vec2 v1, float a)
 {
     return (Vec2){v1.x * a, v1.y * a};
 }
 
-Vec2 vec2_rotate_rad(Vec2 v1, float angle_rad)
+extern inline Vec2 vec2_rotate_rad(Vec2 v1, float angle_rad)
 {
     return (Vec2){v1.x * cosf(angle_rad) - v1.y * sinf(angle_rad), v1.x * sinf(angle_rad) + v1.y * cosf(angle_rad)};
 }
 
-Vec2 vec2_rotate_deg(Vec2 v1, float angle_deg)
+extern inline Vec2 vec2_rotate_deg(Vec2 v1, float angle_deg)
 {
     float angle_rad = angle_deg / 180.0 * M_PI;
     return vec2_rotate_rad(v1, angle_rad);
 }
 
-float vec2_norm(Vec2 v1)
+extern inline float vec2_norm(Vec2 v1)
 {
     float norm_sq = v1.x * v1.x + v1.y * v1.y;
     return sqrtf(norm_sq);
 }
 
-float vec2_norm_squared(Vec2 v1)
+extern inline float vec2_norm_squared(Vec2 v1)
 {
     return v1.x * v1.x + v1.y * v1.y;
 }
 
-Vec2 vec2_unitvector(Vec2 v1)
+extern inline Vec2 vec2_unitvector(Vec2 v1)
 {
     float norm = vec2_norm(v1);
     if (norm > 0)
@@ -60,17 +60,17 @@ Vec2 vec2_unitvector(Vec2 v1)
         return (Vec2){0, 0};
 }
 
-Vec2 vec2_normal(Vec2 v1)
+extern inline Vec2 vec2_normal(Vec2 v1)
 {
     return vec2_unitvector((Vec2){v1.y, -v1.x});
 }
 
-float vec2_dot(Vec2 v1, Vec2 v2)
+extern inline float vec2_dot(Vec2 v1, Vec2 v2)
 {
     return v1.x * v2.x + v1.y * v2.y;
 }
 
-float vec2_cross(Vec2 v1, Vec2 v2)
+extern inline float vec2_cross(Vec2 v1, Vec2 v2)
 {
     return (v1.x * v2.y) - (v1.y * v2.x);
 }
