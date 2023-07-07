@@ -351,7 +351,6 @@ void penetration_constraint_solve(PenetrationConstraint *c, unsigned int iterati
     matmn_sub(&c->cached_lambda, &old_lambda, &lambda);
 
     MatMN impulses = matmn_create(jacobian_T.m, lambda.n, MEM_SCRATCH_POOL);
-    // matmn_mul(&jacobian_T, &lambda, &impulses);
 
     MATMN_AT(impulses, 0, 0) = MATMN_AT(c->jacobian, 0, 0) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 0) * MATMN_AT(lambda, 1, 0);
     MATMN_AT(impulses, 1, 0) = MATMN_AT(c->jacobian, 0, 1) * MATMN_AT(lambda, 0, 0) + MATMN_AT(c->jacobian, 1, 1) * MATMN_AT(lambda, 1, 0);

@@ -10,7 +10,7 @@
 
 #include "mem.h"
 
-#define FPS 30
+#define FPS 60
 #define MILLISECONDS_PER_FRAME ((int)(1000.0f / FPS))
 
 typedef struct

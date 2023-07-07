@@ -32,7 +32,7 @@ void world_create(World *w, float gravity)
 
     w->joint_beta = 0.2;
     w->penetration_beta = 0.2;
-    w->constraint_iterations = 10;
+    w->constraint_iterations = 5;
     w->gauss_seidel_iterations = 5;
 }
 

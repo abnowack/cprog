@@ -19,15 +19,23 @@ Graphics gfx = {0, 0, NULL, NULL};
 
 bool gfx_create_window(int window_width, int window_height)
 {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    if (SDL_Init(SDL_INIT_EVERYTHING & ~SDL_INIT_HAPTIC) != 0)
     {
         fprintf(stderr, "Error initializing SDL\n");
         return false;
     }
     SDL_DisplayMode display_mode;
     SDL_GetCurrentDisplayMode(0, &display_mode);
-    gfx.window_width = display_mode.w;
-    gfx.window_height = display_mode.h;
+    if (window_height > 0 && window_height > 0)
+    {
+        gfx.window_width = window_width;
+        gfx.window_height = window_height;
+    }
+    else
+    {
+        gfx.window_width = display_mode.w;
+        gfx.window_height = display_mode.h;
+    }
     gfx.window = SDL_CreateWindow(NULL, 0, 0, gfx.window_width, gfx.window_height, SDL_WINDOW_BORDERLESS);
     if (!gfx.window)
     {
